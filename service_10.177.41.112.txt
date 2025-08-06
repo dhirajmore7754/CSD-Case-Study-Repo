@@ -1,0 +1,1 @@
+10.177.41.112,/opt (71%) ,2025-08-06 05:00:02 PM,2 weeks 4 days 7 hours 13 minutes,DR LINUX,64,                   8,9.6(Plow),5.14.0-570.26.1.el9_6.x86_64,Sat Jul EDT 5,12.0.12.10, 9.4.0.11,active,599,DSrunning,SPLrunning,undefined,10.179.70.2, 0.000034202 seconds slow of NTP time, Sep 24 2025, Oct 05 2025, Sep 24 2025, Nov 01 2025
