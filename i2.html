@@ -1,3 +1,4 @@
+    
 <!doctype html>
 <html lang="en">
 <head>
@@ -601,4 +602,591 @@
     ctx.globalAlpha = alpha;
     ctx.fillStyle = color;
     ctx.beginPath();
-    con
+    const spikes = 5, outer = size, inner = size*0.45;
+    let rot = Math.PI / 2 * 3;
+    ctx.moveTo(0, -outer);
+    for(let i=0;i<spikes;i++){
+      ctx.lineTo(Math.cos(rot)*outer, Math.sin(rot)*outer);
+      rot += Math.PI/spikes;
+      ctx.lineTo(Math.cos(rot)*inner, Math.sin(rot)*inner);
+      rot += Math.PI/spikes;
+    }
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+  }
+
+  // Chair + Girl (more shading)
+  function drawChair(x,y){
+    ctx.save();
+    ctx.translate(x,y);
+    ctx.strokeStyle = "rgba(42,23,48,.85)";
+    ctx.lineWidth = 5;
+
+    // seat gradient
+    let g = ctx.createLinearGradient(-70,0,70,0);
+    g.addColorStop(0,"#9c91ff"); g.addColorStop(1,"#c7bcff");
+    ctx.fillStyle = g;
+    roundRect(-70, 10, 140, 26, 12); ctx.fill(); ctx.stroke();
+
+    // back
+    g = ctx.createLinearGradient(-70,-90,70,30);
+    g.addColorStop(0,"#a59aff"); g.addColorStop(1,"#d3caff");
+    ctx.fillStyle = g;
+    roundRect(-70, -95, 140, 110, 16); ctx.fill(); ctx.stroke();
+
+    // legs
+    ctx.lineWidth = 6;
+    ctx.beginPath();
+    ctx.moveTo(-55, 36); ctx.lineTo(-55, 96);
+    ctx.moveTo( 55, 36); ctx.lineTo( 55, 96);
+    ctx.moveTo(-55, 36); ctx.lineTo(-68, 96);
+    ctx.moveTo( 55, 36); ctx.lineTo( 68, 96);
+    ctx.stroke();
+
+    ctx.restore();
+  }
+
+  function drawGirl(x,y,breath,look){
+    ctx.save();
+    ctx.translate(x, y + breath);
+
+    // head (skin gradient)
+    const skin = ctx.createRadialGradient(-18, -140, 10, 0, -120, 70);
+    skin.addColorStop(0, "rgba(255,255,255,.85)");
+    skin.addColorStop(0.25, "rgba(255,226,154,.28)");
+    skin.addColorStop(1, "#ffd7cf");
+
+    // hair gradient
+    const hair = ctx.createLinearGradient(-70,-200,70,-80);
+    hair.addColorStop(0, "#20121f");
+    hair.addColorStop(1, "#3a2440");
+
+    // glow behind head
+    ctx.globalAlpha = 0.20;
+    ctx.fillStyle = "#ff79c9";
+    ctx.filter = "blur(18px)";
+    ctx.beginPath(); ctx.arc(0, -118, 66, 0, Math.PI*2); ctx.fill();
+    ctx.filter = "none"; ctx.globalAlpha = 1;
+
+    // head
+    ctx.fillStyle = skin;
+    ctx.strokeStyle = "rgba(42,23,48,.85)";
+    ctx.lineWidth = 5;
+    ctx.beginPath(); ctx.arc(0, -118, 58, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+
+    // hair cap
+    ctx.fillStyle = hair;
+    ctx.beginPath();
+    ctx.arc(0, -130, 60, Math.PI*0.06, Math.PI*0.94, true);
+    ctx.closePath(); ctx.fill(); ctx.stroke();
+
+    // bangs
+    ctx.fillStyle = hair;
+    ctx.beginPath();
+    ctx.ellipse(-20, -122, 22, 18, 0.25, 0, Math.PI*2);
+    ctx.ellipse( 20, -122, 22, 18,-0.25, 0, Math.PI*2);
+    ctx.fill();
+
+    // eyes (with look offset)
+    const lx = look*5;
+    ctx.fillStyle = "#101018";
+    ctx.beginPath(); ctx.arc(-20+lx, -116, 7, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc( 20+lx, -116, 7, 0, Math.PI*2); ctx.fill();
+
+    // eye shine
+    ctx.fillStyle = "rgba(255,255,255,.95)";
+    ctx.beginPath(); ctx.arc(-17+lx, -119, 2.4, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc( 23+lx, -119, 2.4, 0, Math.PI*2); ctx.fill();
+
+    // blush
+    ctx.fillStyle = "rgba(255,121,201,.32)";
+    ctx.beginPath(); ctx.arc(-38, -98, 10, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc( 38, -98, 10, 0, Math.PI*2); ctx.fill();
+
+    // dress (more “realistic” shading)
+    const dress = ctx.createLinearGradient(-50,-70,50,60);
+    dress.addColorStop(0, "#5fbfff");
+    dress.addColorStop(1, "#a7e7ff");
+    ctx.fillStyle = dress;
+    roundRect(-35, -64, 70, 74, 22); ctx.fill(); ctx.stroke();
+
+    // small bow
+    drawHeart(-10, -46, 10, "rgba(255,226,154,.85)", 1);
+    drawHeart( 10, -46, 10, "rgba(255,226,154,.85)", 1);
+
+    // skirt
+    ctx.beginPath();
+    ctx.moveTo(-48, 10); ctx.lineTo(48, 10); ctx.lineTo(0, 58); ctx.closePath();
+    ctx.fill(); ctx.stroke();
+
+    // arms
+    ctx.lineWidth = 8;
+    ctx.strokeStyle = "rgba(255,215,207,.95)";
+    ctx.beginPath();
+    ctx.moveTo(-32, -30); ctx.quadraticCurveTo(-76, -10, -58, 18);
+    ctx.moveTo( 32, -30); ctx.quadraticCurveTo( 76, -10,  58, 18);
+    ctx.stroke();
+
+    // legs (sitting)
+    ctx.lineWidth = 10;
+    ctx.strokeStyle = "rgba(255,255,255,.95)";
+    ctx.beginPath();
+    ctx.moveTo(-12, 36); ctx.quadraticCurveTo(-22, 62, -12, 86);
+    ctx.moveTo( 12, 36); ctx.quadraticCurveTo( 22, 62,  12, 86);
+    ctx.stroke();
+
+    // shoes
+    ctx.fillStyle = "#ff79c9";
+    ctx.strokeStyle = "rgba(42,23,48,.85)";
+    ctx.lineWidth = 4;
+    roundRect(-28, 78, 28, 16, 10); ctx.fill(); ctx.stroke();
+    roundRect(0,   78, 28, 16, 10); ctx.fill(); ctx.stroke();
+
+    ctx.restore();
+  }
+
+  function drawCat(x,y,wiggle){
+    ctx.save();
+    ctx.translate(x,y);
+    ctx.rotate(wiggle*0.05);
+
+    ctx.fillStyle = "#ffffff";
+    ctx.strokeStyle = "rgba(42,23,48,.85)";
+    ctx.lineWidth = 4;
+
+    ctx.beginPath(); ctx.arc(0, 0, 24, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+    ctx.beginPath(); ctx.arc(24, -8, 20, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+
+    ctx.fillStyle = "#ffa6dd";
+    ctx.beginPath(); ctx.moveTo(18, -30); ctx.lineTo(28, -18); ctx.lineTo(8, -18); ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(36, -30); ctx.lineTo(44, -18); ctx.lineTo(26, -18); ctx.closePath(); ctx.fill(); ctx.stroke();
+
+    ctx.fillStyle = "#101018";
+    ctx.beginPath(); ctx.arc(18, -8, 3.2, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(30, -8, 3.2, 0, Math.PI*2); ctx.fill();
+    ctx.restore();
+  }
+
+  // Gift object
+  function drawGift(x,y,open01){
+    ctx.save();
+    ctx.translate(x,y);
+
+    // box glow
+    ctx.globalAlpha = 0.22;
+    ctx.fillStyle = "#ff79c9";
+    ctx.filter = "blur(18px)";
+    roundRect(-80, -26, 160, 124, 20); ctx.fill();
+    ctx.filter = "none";
+    ctx.globalAlpha = 1;
+
+    ctx.fillStyle = "#ff79c9";
+    ctx.strokeStyle = "rgba(42,23,48,.85)";
+    ctx.lineWidth = 5;
+    roundRect(-80, -26, 160, 124, 20); ctx.fill(); ctx.stroke();
+
+    ctx.fillStyle = "#ffe29a";
+    roundRect(-12, -26, 24, 124, 12); ctx.fill(); ctx.stroke();
+    roundRect(-80, 18, 160, 18, 12); ctx.fill(); ctx.stroke();
+
+    // lid
+    const lidRot = -1.2 * open01;
+    ctx.save();
+    ctx.translate(0, -40);
+    ctx.rotate(lidRot);
+    ctx.translate(0, -10);
+    ctx.fillStyle = "#ff79c9";
+    roundRect(-86, -20, 172, 40, 16); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = "#ffe29a";
+    roundRect(-12, -20, 24, 40, 12); ctx.fill(); ctx.stroke();
+    ctx.restore();
+
+    // bow
+    drawHeart(-18, -58 - open01*10, 18, "#ffe29a", 1);
+    drawHeart( 18, -58 - open01*10, 18, "#ffe29a", 1);
+
+    ctx.restore();
+  }
+
+  // Wish card
+  function drawWishCard(alpha){
+    const cx = W/2, cy = H*0.42;
+    const w = Math.min(W*0.80, 820);
+    const h = Math.min(H*0.40, 300);
+
+    ctx.save();
+    ctx.globalAlpha = alpha;
+
+    // glow
+    ctx.globalAlpha = alpha*0.35;
+    ctx.fillStyle = "#ff79c9";
+    ctx.filter = "blur(24px)";
+    roundRect(cx-w/2, cy-h/2, w, h, 26); ctx.fill();
+    ctx.filter = "none";
+    ctx.globalAlpha = alpha;
+
+    // card
+    ctx.fillStyle = "rgba(255,255,255,0.92)";
+    ctx.strokeStyle = "rgba(42,23,48,.85)";
+    ctx.lineWidth = 6;
+    roundRect(cx-w/2, cy-h/2, w, h, 26);
+    ctx.fill(); ctx.stroke();
+
+    // border
+    ctx.strokeStyle = "rgba(255,121,201,.85)";
+    ctx.lineWidth = 6;
+    roundRect(cx-w/2+10, cy-h/2+10, w-20, h-20, 22);
+    ctx.stroke();
+
+    // text
+    ctx.textAlign = "center";
+    ctx.fillStyle = "#2a1730";
+    ctx.font = "900 42px system-ui, -apple-system, Segoe UI, Roboto, Arial";
+    ctx.fillText(`Happy Birthday ${BIRTHDAY_NAME}!`, cx, cy-44);
+
+    ctx.font = "700 22px system-ui, -apple-system, Segoe UI, Roboto, Arial";
+    ctx.fillStyle = "#5b3a6e";
+    ctx.fillText("A calm heart, a bright smile, a beautiful year ✨", cx, cy+2);
+
+    ctx.fillStyle = "#6a5aa8";
+    ctx.fillText("You deserve the sweetest surprises 🎀", cx, cy+38);
+
+    ctx.restore();
+  }
+
+  // ============================
+  // Scene Draws
+  // ============================
+  function drawBaseNature(dayMood, wind){
+    drawSky(dayMood);
+
+    // clouds back
+    cloudsBack.forEach(c=> drawCloud(c.x, c.y, c.s, 0.88));
+    drawHills(dayMood);
+    drawGround();
+
+    // trees (more)
+    const baseY = H*0.62;
+    drawSakuraTree(W*0.12, baseY-40, 0.92, wind);
+    drawSakuraTree(W*0.88, baseY-32, 1.06, -wind*0.6);
+    drawSakuraTree(W*0.72, baseY-24, 0.74, wind*0.8);
+
+    // clouds front
+    cloudsFront.forEach(c=> drawCloud(c.x, c.y, c.s, 0.92));
+  }
+
+  function updateNature(dt, speed){
+    // clouds
+    cloudsBack.forEach(c=>{
+      c.x += c.v*dt*speed*0.75;
+      if(c.x > W+320) c.x = -320;
+      if(c.x < -320) c.x = W+320;
+    });
+    cloudsFront.forEach(c=>{
+      c.x += c.v*dt*speed;
+      if(c.x > W+320) c.x = -320;
+      if(c.x < -320) c.x = W+320;
+    });
+
+    // birds
+    birds.forEach(b=>{
+      b.wing += dt*speed*8.5*(0.6 + (1-b.depth));
+      b.x += b.vx*dt*speed*(0.65 + (1-b.depth));
+      // slight float
+      b.y += Math.sin(globalT*0.7 + b.depth*5)*dt*speed*8*(0.6);
+      if(b.x > W+220) b.x = -220;
+      if(b.x < -220) b.x = W+220;
+    });
+
+    // petals
+    petals.forEach(p=>{
+      p.x += (p.vx + Math.sin(globalT*0.7 + p.y*0.01)*12)*dt*speed;
+      p.y += p.vy*dt*speed;
+      p.r += p.vr*dt*speed;
+      if(p.y > H+30){ p.y = -rand(20, H*0.65); p.x = rand(-160, W+160); }
+      if(p.x > W+200) p.x = -200;
+      if(p.x < -200) p.x = W+200;
+    });
+
+    // leaves
+    leaves.forEach(l=>{
+      l.x += (l.vx + Math.sin(globalT*1.2 + l.y*0.01)*18)*dt*speed;
+      l.y += (l.vy + Math.cos(globalT*0.9 + l.x*0.01)*10)*dt*speed;
+      l.r += l.vr*dt*speed;
+      if(l.y > H+60){ l.y = -rand(30, H*0.4); l.x = rand(-200, W+200); }
+      if(l.x > W+240) l.x = -240;
+    });
+
+    // butterflies
+    butterflies.forEach(b=>{
+      b.ph += dt*speed*7.0;
+      b.x += (b.vx + Math.sin(globalT*1.5 + b.ph)*12)*dt*speed;
+      b.y += (b.vy + Math.cos(globalT*1.4 + b.ph)*10)*dt*speed;
+      // keep near girl area
+      const minX=W*0.14, maxX=W*0.58, minY=H*0.34, maxY=H*0.70;
+      if(b.x<minX) b.x=minX; if(b.x>maxX) b.x=maxX;
+      if(b.y<minY) b.y=minY; if(b.y>maxY) b.y=maxY;
+    });
+  }
+
+  function drawParticles(wind, dayMood, strength=1){
+    // petals (soft hearts)
+    petals.forEach(p=>{
+      ctx.save();
+      ctx.translate(p.x, p.y);
+      ctx.rotate(p.r + wind*0.08);
+      ctx.globalAlpha = p.a*strength;
+      // glow
+      ctx.shadowColor = "rgba(255,121,201,.45)";
+      ctx.shadowBlur = 12;
+      drawHeart(0,0,p.s, "rgba(255,166,221,.95)", p.a*strength);
+      ctx.restore();
+    });
+
+    // leaves
+    leaves.forEach(l=>{
+      ctx.save();
+      ctx.translate(l.x, l.y);
+      ctx.rotate(l.r);
+      ctx.globalAlpha = 0.35*strength;
+      ctx.shadowColor = "rgba(140,255,200,.35)";
+      ctx.shadowBlur = 10;
+      ctx.fillStyle = l.col;
+      ctx.beginPath();
+      ctx.ellipse(0,0, l.s*0.9, l.s*0.5, 0.4, 0, Math.PI*2);
+      ctx.fill();
+      ctx.restore();
+    });
+  }
+
+  function drawBirdsLayer(){
+    // draw sorted by depth (far first)
+    const sorted = birds.slice().sort((a,b)=>a.depth-b.depth);
+    sorted.forEach(b=> drawBird(b));
+  }
+
+  function drawGarden(local, alpha, wind){
+    // show popup only in garden
+    if(local > 2 && local < 10) showPopup(); else hidePopup();
+
+    drawBaseNature(0.0, wind);
+
+    // birds
+    drawBirdsLayer();
+
+    // particles
+    drawParticles(wind, 0.0, 1);
+
+    // foreground: chair + girl + cat
+    const chairX = W*0.30, chairY = H*0.62 + 58;
+    drawChair(chairX, chairY);
+
+    const breath = Math.sin(globalT*2.2)*3.8;
+    const look = Math.sin(globalT*0.9)*0.7;
+    drawGirl(chairX, chairY, breath, look);
+    drawCat(W*0.45, H*0.62 + 86, Math.sin(globalT*2.6));
+
+    // butterflies near girl
+    butterflies.forEach(b=> drawButterfly(b.x, b.y, b.s, b.ph));
+
+    // scene caption glow
+    softGlowCircle(chairX+80, chairY-220, 18, "rgba(255,226,154,.85)", 18, 0.10);
+  }
+
+  function drawGiftScene(local, alpha, wind){
+    hidePopup();
+    drawBaseNature(0.1, wind);
+
+    drawBirdsLayer();
+    drawParticles(wind, 0.1, 0.85);
+
+    // chair + girl (still present)
+    const chairX = W*0.28, chairY = H*0.62 + 58;
+    drawChair(chairX, chairY);
+    drawGirl(chairX, chairY, Math.sin(globalT*2.2)*3.5, Math.sin(globalT*0.9)*0.6);
+
+    // gift open
+    const open01 = clamp01((local-0.4)/1.2);
+    drawGift(W*0.66, H*0.62 + 68, open01);
+
+    // confetti update + draw
+    confetti.forEach(c=>{
+      c.life -= dtNow;
+      c.vy += c.g*dtNow;
+      c.x += c.vx*dtNow;
+      c.y += c.vy*dtNow;
+      c.r += c.vr*dtNow;
+
+      const a = clamp01(c.life/2.6);
+      ctx.save();
+      ctx.translate(c.x,c.y);
+      ctx.rotate(c.r);
+      ctx.globalAlpha = a;
+      ctx.shadowColor = c.col;
+      ctx.shadowBlur = 14;
+      if(c.kind==="heart") drawHeart(0,0,c.s,c.col,a);
+      else drawStar(0,0,c.s*0.65,c.col,a);
+      ctx.restore();
+    });
+    confetti = confetti.filter(c => c.life > 0 && c.y < H+160);
+  }
+
+  function drawFireworksScene(local, alpha, wind){
+    // show popup again (finale vibe)
+    if(local > 1.5 && local < 8.5) showPopup(); else hidePopup();
+
+    drawBaseNature(0.55, wind);
+    drawBirdsLayer();
+
+    // fewer petals; more sky
+    drawParticles(wind, 0.55, 0.55);
+
+    // spawn fireworks
+    if(Math.random() < 0.10) spawnFirework();
+
+    fireworks.forEach(fw=>{
+      fw.parts.forEach(pt=>{
+        pt.life -= dtNow;
+        pt.vx *= (1 - 0.78*dtNow);
+        pt.vy *= (1 - 0.78*dtNow);
+        pt.vy += 140*dtNow;
+        pt.x += pt.vx*dtNow;
+        pt.y += pt.vy*dtNow;
+
+        const a = clamp01(pt.life/1.8);
+        ctx.save();
+        ctx.globalAlpha = a;
+        ctx.shadowColor = fw.col;
+        ctx.shadowBlur = 26;
+        drawStar(pt.x, pt.y, 12, fw.col, a);
+        // extra glow dot
+        softGlowCircle(pt.x, pt.y, 6, fw.col, 18, a*0.20);
+        ctx.restore();
+      });
+    });
+    fireworks = fireworks
+      .map(fw => ({...fw, parts: fw.parts.filter(p=>p.life>0)}))
+      .filter(fw=>fw.parts.length>0);
+  }
+
+  function drawCardScene(local, alpha, wind){
+    hidePopup();
+    drawBaseNature(0.15, wind);
+    drawBirdsLayer();
+    drawParticles(wind, 0.15, 0.60);
+
+    const a = clamp01(local/1.2);
+    drawWishCard(a);
+
+    // floating stickers
+    cardStickers.forEach(st=>{
+      const bob = Math.sin(globalT*1.6 + st.ph)*8;
+      ctx.save();
+      ctx.globalAlpha = 0.55 + 0.35*(0.5+0.5*Math.sin(globalT*2.2 + st.ph));
+      ctx.font = `900 ${st.s}px system-ui, -apple-system, Segoe UI, Roboto, Arial`;
+      ctx.shadowColor = "rgba(255,121,201,.55)";
+      ctx.shadowBlur = 16;
+      ctx.fillText(st.emoji, st.x + Math.cos(globalT*0.9 + st.ph)*6, st.y + bob);
+      ctx.restore();
+    });
+  }
+
+  // wrappers to match timeline.draw signature
+  function drawGardenWrap(local, alpha, wind){ drawGarden(local, alpha, wind); }
+  function drawGiftWrap(local, alpha, wind){ drawGiftScene(local, alpha, wind); }
+  function drawFireworksWrap(local, alpha, wind){ drawFireworksScene(local, alpha, wind); }
+  function drawCardWrap(local, alpha, wind){ drawCardScene(local, alpha, wind); }
+
+  // attach correct draw fns
+  timeline[0].draw = drawGardenWrap;
+  timeline[1].draw = drawGiftWrap;
+  timeline[2].draw = drawFireworksWrap;
+  timeline[3].draw = drawCardWrap;
+
+  // ============================
+  // Playback control
+  // ============================
+  let started = false;
+  let globalT = 0;
+  let dtNow = 0;
+  let speedIndex = 0;
+  let speed = SPEED_PRESETS[speedIndex];
+
+  // pre-burst confetti so scene 2 is rich
+  burstConfetti();
+
+  function setUIForScene(i){
+    const seg = timeline[i];
+    sceneLabel.textContent = `Scene / ${seg.name}`;
+    cornerSticker.textContent = seg.sticker;
+    hintLine.textContent = seg.hint;
+    status.textContent = `Playing… (${seg.name})`;
+  }
+
+  document.getElementById("startBtn").addEventListener("click", ()=>{
+    started = true;
+    status.textContent = "Playing…";
+  });
+
+  document.getElementById("replayBtn").addEventListener("click", ()=>{
+    started = true;
+    globalT = 0;
+    fireworks = [];
+    burstConfetti();
+    status.textContent = "Replaying…";
+  });
+
+  const speedBtn = document.getElementById("speedBtn");
+  speedBtn.textContent = `Speed: ${speed.toFixed(2)}×`;
+  speedBtn.addEventListener("click", ()=>{
+    speedIndex = (speedIndex + 1) % SPEED_PRESETS.length;
+    speed = SPEED_PRESETS[speedIndex];
+    speedBtn.textContent = `Speed: ${speed.toFixed(2)}×`;
+  });
+
+  // ============================
+  // Main loop
+  // ============================
+  let last = performance.now();
+  function frame(now){
+    const rawDt = Math.min(0.033, (now-last)/1000);
+    last = now;
+
+    dtNow = rawDt;
+    if(started) globalT += rawDt * speed;
+
+    // Update moving nature every frame (even before start, tiny motion)
+    const simSpeed = started ? speed : 0.35;
+    updateNature(rawDt, simSpeed);
+
+    // Which scene now?
+    const s = sceneAtTime(globalT);
+    setUIForScene(s.i);
+
+    // Scene alpha (fade)
+    const a = fadeAlpha(s.local, s.seg.dur);
+
+    // Wind changes slowly
+    const wind = Math.sin(globalT*0.35) * 0.8;
+
+    // Draw current scene
+    ctx.clearRect(0,0,W,H);
+    s.seg.draw(s.local, a, wind);
+
+    // Extra cinematic grade
+    vignette(0.33);
+
+    // Ensure gift confetti refresh at scene start
+    if(s.i === 1 && s.local < 0.18 && confetti.length < 80){
+      burstConfetti();
+    }
+
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+
+})();
+</script>
+</body>
+</html>
