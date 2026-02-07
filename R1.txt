@@ -1,0 +1,653 @@
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import "./App.css";
+
+import { Canvas, useFrame, useThree } from "@react-three/fiber";
+import {
+  Html,
+  Float,
+  Environment,
+  OrbitControls,
+  Sparkles,
+  Stars,
+  PerformanceMonitor,
+} from "@react-three/drei";
+import { EffectComposer, Bloom, Vignette, DepthOfField } from "@react-three/postprocessing";
+import * as THREE from "three";
+
+/**
+ * VFX Birthday Experience
+ * - Stage 0: Night intro + fireworks sparkles
+ * - Stage 1: Garden scene + girl on chair + popup "Happy Birthday Muskan"
+ * - Stage 2: Finale + cake + balloons + confetti
+ */
+export default function App() {
+  const [stage, setStage] = useState(0);
+  const name = "Muskan";
+
+  // Optional: auto-advance
+  // useEffect(() => {
+  //   const t = setInterval(() => setStage((s) => (s + 1) % 3), 9000);
+  //   return () => clearInterval(t);
+  // }, []);
+
+  return (
+    <div className="page">
+      <div className="hud">
+        <div className="title">🎉 Birthday VFX</div>
+        <div className="subtitle">Stage: {stage + 1} / 3</div>
+
+        <div className="buttons">
+          <button onClick={() => setStage(0)} className={stage === 0 ? "active" : ""}>
+            Intro
+          </button>
+          <button onClick={() => setStage(1)} className={stage === 1 ? "active" : ""}>
+            Garden
+          </button>
+          <button onClick={() => setStage(2)} className={stage === 2 ? "active" : ""}>
+            Finale
+          </button>
+        </div>
+
+        <div className="hint">Tip: Use a 90Hz/120Hz display for “90fps feel”.</div>
+      </div>
+
+      <Canvas
+        className="canvas"
+        shadows
+        dpr={[1, 2]}
+        gl={{ antialias: true, powerPreference: "high-performance" }}
+        camera={{ position: [0, 2.2, 7], fov: 45, near: 0.1, far: 200 }}
+      >
+        <AdaptiveQuality />
+        <Scene stage={stage} name={name} />
+      </Canvas>
+    </div>
+  );
+}
+
+/** Dynamically adjusts DPR to keep FPS high on weaker devices */
+function AdaptiveQuality() {
+  const { gl } = useThree();
+  const [dpr, setDpr] = useState(1.5);
+
+  return (
+    <PerformanceMonitor
+      onIncline={() => {
+        const next = Math.min(2, dpr + 0.25);
+        setDpr(next);
+        gl.setPixelRatio(next);
+      }}
+      onDecline={() => {
+        const next = Math.max(1, dpr - 0.25);
+        setDpr(next);
+        gl.setPixelRatio(next);
+      }}
+    />
+  );
+}
+
+function Scene({ stage, name }) {
+  return (
+    <>
+      <Rig stage={stage} />
+      <Lighting stage={stage} />
+
+      {/* Background helpers */}
+      {stage === 0 && <Stars radius={100} depth={50} count={4000} factor={4} fade speed={1} />}
+      {stage !== 0 && <Environment preset="sunset" />}
+
+      {/* Scene content */}
+      {stage === 0 && <IntroScene name={name} />}
+      {stage === 1 && <GardenScene name={name} />}
+      {stage === 2 && <FinaleScene name={name} />}
+
+      {/* Postprocessing (keep it light for FPS) */}
+      <EffectComposer multisampling={0}>
+        <Bloom intensity={stage === 0 ? 0.55 : 0.35} mipmapBlur />
+        <DepthOfField focusDistance={0.02} focalLength={0.02} bokehScale={stage === 0 ? 1.6 : 1.2} />
+        <Vignette eskil={false} offset={0.2} darkness={0.6} />
+      </EffectComposer>
+
+      {/* Optional controls (disabled rotate in stages for “cinematic”) */}
+      <OrbitControls enablePan={false} enableZoom={false} enableRotate={false} />
+    </>
+  );
+}
+
+/** Cinematic camera movement per stage */
+function Rig({ stage }) {
+  const { camera } = useThree();
+  const targetPos = useMemo(() => {
+    if (stage === 0) return new THREE.Vector3(0, 2.3, 8.5);
+    if (stage === 1) return new THREE.Vector3(0.2, 2.0, 6.5);
+    return new THREE.Vector3(0, 2.4, 7.2);
+  }, [stage]);
+
+  const lookAt = useMemo(() => {
+    if (stage === 0) return new THREE.Vector3(0, 1.4, 0);
+    if (stage === 1) return new THREE.Vector3(0, 1.35, 0);
+    return new THREE.Vector3(0, 1.4, 0);
+  }, [stage]);
+
+  useFrame((state, dt) => {
+    camera.position.lerp(targetPos, 1 - Math.pow(0.001, dt)); // smooth easing
+    camera.lookAt(lookAt);
+
+    // subtle drift for “vfx vibe”
+    const t = state.clock.elapsedTime;
+    camera.position.x += Math.sin(t * 0.2) * 0.0008;
+    camera.position.y += Math.cos(t * 0.22) * 0.0006;
+  });
+
+  return null;
+}
+
+function Lighting({ stage }) {
+  return (
+    <>
+      <ambientLight intensity={stage === 0 ? 0.15 : 0.45} />
+      <directionalLight
+        position={[5, 9, 6]}
+        intensity={stage === 0 ? 0.35 : 1.0}
+        castShadow
+        shadow-mapSize-width={1024}
+        shadow-mapSize-height={1024}
+      />
+      <pointLight position={[-4, 3, 2]} intensity={stage === 0 ? 1.0 : 0.5} color={"#ffd6ff"} />
+      <pointLight position={[3, 2.5, -2]} intensity={stage === 0 ? 0.9 : 0.4} color={"#a0c4ff"} />
+    </>
+  );
+}
+
+/* --------------------------- STAGE 0: INTRO --------------------------- */
+function IntroScene({ name }) {
+  return (
+    <group>
+      <FloatingText lines={[`Hi ${name} ✨`, "A little VFX surprise..."]} position={[0, 2.2, 0]} />
+      <Fireworks />
+      <Sparkles count={120} scale={[10, 6, 10]} size={2} speed={0.3} opacity={0.8} />
+    </group>
+  );
+}
+
+/** Lightweight “fireworks” using instanced points */
+function Fireworks() {
+  const ref = useRef();
+  const count = 900;
+
+  const data = useMemo(() => {
+    const arr = new Array(count).fill(0).map(() => ({
+      // start somewhere up
+      p: new THREE.Vector3(
+        (Math.random() - 0.5) * 6,
+        1.2 + Math.random() * 2.8,
+        (Math.random() - 0.5) * 4
+      ),
+      v: new THREE.Vector3(
+        (Math.random() - 0.5) * 1.5,
+        (Math.random() - 0.5) * 1.5,
+        (Math.random() - 0.5) * 1.5
+      ),
+      life: Math.random() * 1.0,
+    }));
+    return arr;
+  }, []);
+
+  const geom = useMemo(() => new THREE.BufferGeometry(), []);
+  const positions = useMemo(() => new Float32Array(count * 3), [count]);
+
+  useEffect(() => {
+    geom.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+  }, [geom, positions]);
+
+  useFrame((state, dt) => {
+    const t = state.clock.elapsedTime;
+
+    for (let i = 0; i < count; i++) {
+      const d = data[i];
+
+      d.life -= dt;
+      if (d.life <= 0) {
+        // reset burst
+        d.p.set((Math.random() - 0.5) * 6, 1.2 + Math.random() * 2.8, (Math.random() - 0.5) * 4);
+        const burst = 1.2 + Math.random() * 1.6;
+        d.v.set((Math.random() - 0.5) * burst, (Math.random() - 0.2) * burst, (Math.random() - 0.5) * burst);
+        d.life = 0.8 + Math.random() * 0.8;
+      }
+
+      // move + gravity
+      d.v.y -= 0.9 * dt;
+      d.p.addScaledVector(d.v, dt);
+
+      positions[i * 3 + 0] = d.p.x + Math.sin(t * 1.7 + i) * 0.003;
+      positions[i * 3 + 1] = d.p.y + Math.cos(t * 1.4 + i) * 0.003;
+      positions[i * 3 + 2] = d.p.z;
+    }
+
+    geom.attributes.position.needsUpdate = true;
+  });
+
+  return (
+    <points ref={ref} geometry={geom}>
+      <pointsMaterial size={0.03} sizeAttenuation depthWrite={false} transparent opacity={0.9} />
+    </points>
+  );
+}
+
+/* --------------------------- STAGE 1: GARDEN --------------------------- */
+function GardenScene({ name }) {
+  return (
+    <group>
+      <Garden />
+      <GirlOnChair position={[0, 0, 0]} />
+
+      <Butterflies count={18} area={[6, 2.5, 4]} />
+
+      {/* Popup text */}
+      <BirthdayPopup name={name} />
+
+      {/* “Nature” particles */}
+      <Fireflies count={80} area={[9, 3.5, 7]} />
+    </group>
+  );
+}
+
+function Garden() {
+  return (
+    <group>
+      {/* Ground */}
+      <mesh receiveShadow rotation-x={-Math.PI / 2} position={[0, 0, 0]}>
+        <planeGeometry args={[40, 40, 1, 1]} />
+        <meshStandardMaterial color={"#2b8a3e"} roughness={1} metalness={0} />
+      </mesh>
+
+      {/* Path */}
+      <mesh receiveShadow rotation-x={-Math.PI / 2} position={[0, 0.01, 1.3]}>
+        <planeGeometry args={[3.2, 14, 1, 1]} />
+        <meshStandardMaterial color={"#8b5a2b"} roughness={1} />
+      </mesh>
+
+      {/* Trees (simple but looks nice with lighting) */}
+      <Tree position={[-5, 0, -2]} />
+      <Tree position={[6, 0, -3]} scale={1.1} />
+      <Tree position={[-7, 0, 4]} scale={0.9} />
+
+      {/* Flowers */}
+      <FlowerPatch center={[-2, 0, 3]} />
+      <FlowerPatch center={[2.5, 0, -1]} />
+      <FlowerPatch center={[5, 0, 2.5]} />
+    </group>
+  );
+}
+
+function Tree({ position, scale = 1 }) {
+  return (
+    <group position={position} scale={scale}>
+      <mesh castShadow position={[0, 1.2, 0]}>
+        <cylinderGeometry args={[0.25, 0.35, 2.4, 12]} />
+        <meshStandardMaterial color={"#5b3a29"} roughness={1} />
+      </mesh>
+      <mesh castShadow position={[0, 2.6, 0]}>
+        <sphereGeometry args={[1.4, 18, 18]} />
+        <meshStandardMaterial color={"#1f7a2e"} roughness={1} />
+      </mesh>
+      <mesh castShadow position={[0.9, 2.8, 0.4]}>
+        <sphereGeometry args={[1.0, 18, 18]} />
+        <meshStandardMaterial color={"#1c6d2a"} roughness={1} />
+      </mesh>
+    </group>
+  );
+}
+
+function FlowerPatch({ center }) {
+  const flowers = useMemo(() => new Array(26).fill(0).map(() => ({
+    x: center[0] + (Math.random() - 0.5) * 2.2,
+    z: center[2] + (Math.random() - 0.5) * 2.2,
+    s: 0.05 + Math.random() * 0.08,
+  })), [center]);
+
+  return (
+    <group>
+      {flowers.map((f, i) => (
+        <mesh key={i} position={[f.x, 0.05, f.z]} castShadow>
+          <sphereGeometry args={[f.s, 8, 8]} />
+          <meshStandardMaterial color={i % 3 === 0 ? "#ff4d6d" : i % 3 === 1 ? "#ffd166" : "#7bdff2"} />
+        </mesh>
+      ))}
+    </group>
+  );
+}
+
+/** Placeholder “girl sitting on chair” (replace with glTF model later if you want photoreal) */
+function GirlOnChair({ position = [0, 0, 0] }) {
+  return (
+    <group position={position}>
+      <Chair position={[0, 0, 0]} />
+      <Girl position={[0, 0.75, -0.05]} />
+    </group>
+  );
+}
+
+function Chair({ position = [0, 0, 0] }) {
+  return (
+    <group position={position}>
+      {/* Seat */}
+      <mesh castShadow position={[0, 0.45, 0]}>
+        <boxGeometry args={[1.1, 0.12, 1.1]} />
+        <meshStandardMaterial color={"#5c3b2e"} roughness={0.9} />
+      </mesh>
+      {/* Back */}
+      <mesh castShadow position={[0, 0.95, -0.5]}>
+        <boxGeometry args={[1.1, 1.0, 0.12]} />
+        <meshStandardMaterial color={"#4e342e"} roughness={0.9} />
+      </mesh>
+      {/* Legs */}
+      {[
+        [-0.45, 0.22, 0.45],
+        [0.45, 0.22, 0.45],
+        [-0.45, 0.22, -0.45],
+        [0.45, 0.22, -0.45],
+      ].map((p, i) => (
+        <mesh key={i} castShadow position={p}>
+          <boxGeometry args={[0.12, 0.45, 0.12]} />
+          <meshStandardMaterial color={"#3e2723"} roughness={1} />
+        </mesh>
+      ))}
+    </group>
+  );
+}
+
+function Girl({ position = [0, 0.75, 0] }) {
+  return (
+    <group position={position}>
+      {/* Torso */}
+      <mesh castShadow position={[0, 0.35, 0]}>
+        <capsuleGeometry args={[0.22, 0.5, 8, 16]} />
+        <meshStandardMaterial color={"#f72585"} roughness={0.7} />
+      </mesh>
+
+      {/* Head */}
+      <mesh castShadow position={[0, 0.9, 0]}>
+        <sphereGeometry args={[0.18, 16, 16]} />
+        <meshStandardMaterial color={"#ffd6a5"} roughness={0.6} />
+      </mesh>
+
+      {/* Hair */}
+      <mesh castShadow position={[0, 0.98, -0.02]}>
+        <sphereGeometry args={[0.19, 16, 16]} />
+        <meshStandardMaterial color={"#2b2b2b"} roughness={1} />
+      </mesh>
+
+      {/* Legs (bent) */}
+      <mesh castShadow position={[0.12, 0.1, 0.22]} rotation-x={Math.PI / 3}>
+        <capsuleGeometry args={[0.08, 0.5, 8, 16]} />
+        <meshStandardMaterial color={"#3a86ff"} roughness={0.8} />
+      </mesh>
+      <mesh castShadow position={[-0.12, 0.1, 0.22]} rotation-x={Math.PI / 3}>
+        <capsuleGeometry args={[0.08, 0.5, 8, 16]} />
+        <meshStandardMaterial color={"#3a86ff"} roughness={0.8} />
+      </mesh>
+
+      {/* Arms */}
+      <mesh castShadow position={[0.28, 0.45, 0.05]} rotation-z={-0.8}>
+        <capsuleGeometry args={[0.06, 0.35, 8, 16]} />
+        <meshStandardMaterial color={"#ffd6a5"} roughness={0.7} />
+      </mesh>
+      <mesh castShadow position={[-0.28, 0.45, 0.05]} rotation-z={0.8}>
+        <capsuleGeometry args={[0.06, 0.35, 8, 16]} />
+        <meshStandardMaterial color={"#ffd6a5"} roughness={0.7} />
+      </mesh>
+    </group>
+  );
+}
+
+function BirthdayPopup({ name }) {
+  return (
+    <Html center position={[0, 2.2, 0]} transform>
+      <div className="popup">
+        <div className="popupGlow" />
+        <div className="popupTitle">Happy Birthday</div>
+        <div className="popupName">{name} 🎂</div>
+        <div className="popupSub">Wishing you a day full of nature, smiles & magic ✨</div>
+      </div>
+    </Html>
+  );
+}
+
+/** Fireflies: tiny moving points */
+function Fireflies({ count = 60, area = [8, 3, 6] }) {
+  const ref = useRef();
+  const pts = useMemo(() => {
+    return new Array(count).fill(0).map(() => ({
+      p: new THREE.Vector3(
+        (Math.random() - 0.5) * area[0],
+        0.4 + Math.random() * area[1],
+        (Math.random() - 0.5) * area[2]
+      ),
+      s: 0.6 + Math.random() * 1.2,
+      phase: Math.random() * Math.PI * 2,
+    }));
+  }, [count, area]);
+
+  const geom = useMemo(() => new THREE.BufferGeometry(), []);
+  const positions = useMemo(() => new Float32Array(count * 3), [count]);
+
+  useEffect(() => {
+    geom.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+  }, [geom, positions]);
+
+  useFrame((state) => {
+    const t = state.clock.elapsedTime;
+    for (let i = 0; i < count; i++) {
+      const d = pts[i];
+      positions[i * 3 + 0] = d.p.x + Math.sin(t * 0.8 * d.s + d.phase) * 0.12;
+      positions[i * 3 + 1] = d.p.y + Math.cos(t * 1.1 * d.s + d.phase) * 0.10;
+      positions[i * 3 + 2] = d.p.z + Math.sin(t * 0.7 * d.s + d.phase) * 0.10;
+    }
+    geom.attributes.position.needsUpdate = true;
+  });
+
+  return (
+    <points ref={ref} geometry={geom}>
+      <pointsMaterial size={0.03} transparent opacity={0.85} depthWrite={false} color={"#fff3b0"} />
+    </points>
+  );
+}
+
+/** Butterflies: simple flying planes */
+function Butterflies({ count = 12, area = [6, 2.5, 4] }) {
+  const group = useRef();
+  const butterflies = useMemo(
+    () =>
+      new Array(count).fill(0).map(() => ({
+        base: new THREE.Vector3(
+          (Math.random() - 0.5) * area[0],
+          0.9 + Math.random() * area[1],
+          (Math.random() - 0.5) * area[2]
+        ),
+        speed: 0.6 + Math.random() * 0.9,
+        phase: Math.random() * Math.PI * 2,
+      })),
+    [count, area]
+  );
+
+  useFrame((state) => {
+    const t = state.clock.elapsedTime;
+    if (!group.current) return;
+
+    group.current.children.forEach((m, i) => {
+      const b = butterflies[i];
+      m.position.x = b.base.x + Math.sin(t * b.speed + b.phase) * 1.2;
+      m.position.y = b.base.y + Math.cos(t * b.speed * 1.3 + b.phase) * 0.4;
+      m.position.z = b.base.z + Math.sin(t * b.speed * 0.8 + b.phase) * 0.8;
+      m.rotation.y = Math.sin(t * b.speed + b.phase) * 0.8;
+      m.rotation.z = Math.sin(t * 12 * b.speed + b.phase) * 0.6; // wing flutter
+    });
+  });
+
+  return (
+    <group ref={group}>
+      {butterflies.map((_, i) => (
+        <mesh key={i} castShadow>
+          <planeGeometry args={[0.18, 0.12]} />
+          <meshStandardMaterial color={i % 2 === 0 ? "#ffafcc" : "#bde0fe"} roughness={0.7} />
+        </mesh>
+      ))}
+    </group>
+  );
+}
+
+/* --------------------------- STAGE 2: FINALE --------------------------- */
+function FinaleScene({ name }) {
+  return (
+    <group>
+      <mesh receiveShadow rotation-x={-Math.PI / 2} position={[0, 0, 0]}>
+        <planeGeometry args={[40, 40]} />
+        <meshStandardMaterial color={"#0b1020"} roughness={1} />
+      </mesh>
+
+      <Stars radius={120} depth={50} count={5000} factor={4} fade speed={1.2} />
+
+      <FloatingText
+        lines={["🎂 Happy Birthday", `${name} ✨`]}
+        position={[0, 2.4, 0]}
+        big
+      />
+
+      <Cake position={[0, 0.55, 0]} />
+      <Balloons count={8} center={[0, 1.6, -2]} />
+      <Confetti count={900} />
+
+      <Sparkles count={180} scale={[12, 7, 12]} size={2} speed={0.6} opacity={0.9} />
+    </group>
+  );
+}
+
+function Cake({ position = [0, 0.6, 0] }) {
+  return (
+    <group position={position}>
+      <mesh castShadow>
+        <cylinderGeometry args={[1.2, 1.3, 0.9, 32]} />
+        <meshStandardMaterial color={"#ffd166"} roughness={0.6} />
+      </mesh>
+      <mesh castShadow position={[0, 0.55, 0]}>
+        <cylinderGeometry args={[1.05, 1.1, 0.35, 32]} />
+        <meshStandardMaterial color={"#ff4d6d"} roughness={0.5} />
+      </mesh>
+
+      {/* Candles */}
+      {new Array(6).fill(0).map((_, i) => {
+        const angle = (i / 6) * Math.PI * 2;
+        return (
+          <group key={i} position={[Math.cos(angle) * 0.6, 0.75, Math.sin(angle) * 0.6]}>
+            <mesh castShadow>
+              <cylinderGeometry args={[0.05, 0.05, 0.35, 12]} />
+              <meshStandardMaterial color={"#ffffff"} roughness={0.4} />
+            </mesh>
+            <Flame position={[0, 0.22, 0]} />
+          </group>
+        );
+      })}
+    </group>
+  );
+}
+
+function Flame({ position = [0, 0.2, 0] }) {
+  const ref = useRef();
+  useFrame((state) => {
+    const t = state.clock.elapsedTime;
+    if (!ref.current) return;
+    ref.current.scale.y = 0.8 + Math.sin(t * 12) * 0.2;
+    ref.current.scale.x = 0.8 + Math.cos(t * 10) * 0.15;
+  });
+
+  return (
+    <mesh ref={ref} position={position}>
+      <sphereGeometry args={[0.06, 14, 14]} />
+      <meshStandardMaterial emissive={"#ffb703"} emissiveIntensity={2} color={"#ffb703"} />
+    </mesh>
+  );
+}
+
+function Balloons({ count = 6, center = [0, 1.6, -2] }) {
+  const colors = ["#ff4d6d", "#ffd166", "#4cc9f0", "#b5179e", "#80ed99", "#f72585"];
+  return (
+    <group position={center}>
+      {new Array(count).fill(0).map((_, i) => (
+        <Float key={i} speed={1.2 + i * 0.05} rotationIntensity={0.2} floatIntensity={0.9}>
+          <group position={[(Math.random() - 0.5) * 3.2, (Math.random() - 0.5) * 1.1, (Math.random() - 0.5) * 1.6]}>
+            <mesh castShadow>
+              <sphereGeometry args={[0.28, 18, 18]} />
+              <meshStandardMaterial color={colors[i % colors.length]} roughness={0.35} metalness={0.05} />
+            </mesh>
+            <mesh position={[0, -0.45, 0]}>
+              <cylinderGeometry args={[0.01, 0.01, 0.9, 8]} />
+              <meshStandardMaterial color={"#ffffff"} />
+            </mesh>
+          </group>
+        </Float>
+      ))}
+    </group>
+  );
+}
+
+/** Confetti using instanced meshes (fast) */
+function Confetti({ count = 700 }) {
+  const ref = useRef();
+  const dummy = useMemo(() => new THREE.Object3D(), []);
+  const colors = useMemo(() => ["#ff4d6d", "#ffd166", "#4cc9f0", "#80ed99", "#b5179e"], []);
+
+  const items = useMemo(() => {
+    return new Array(count).fill(0).map(() => ({
+      p: new THREE.Vector3((Math.random() - 0.5) * 10, 2 + Math.random() * 6, (Math.random() - 0.5) * 10),
+      v: new THREE.Vector3((Math.random() - 0.5) * 0.6, -1.2 - Math.random() * 0.8, (Math.random() - 0.5) * 0.6),
+      r: new THREE.Euler(Math.random() * Math.PI, Math.random() * Math.PI, Math.random() * Math.PI),
+      rs: new THREE.Vector3(2 + Math.random() * 4, 2 + Math.random() * 4, 2 + Math.random() * 4),
+      c: colors[(Math.random() * colors.length) | 0],
+    }));
+  }, [count, colors]);
+
+  useFrame((state, dt) => {
+    if (!ref.current) return;
+    for (let i = 0; i < count; i++) {
+      const it = items[i];
+      it.p.addScaledVector(it.v, dt);
+      it.r.x += dt * it.rs.x * 0.2;
+      it.r.y += dt * it.rs.y * 0.2;
+      it.r.z += dt * it.rs.z * 0.2;
+
+      if (it.p.y < 0.2) {
+        it.p.set((Math.random() - 0.5) * 10, 5 + Math.random() * 5, (Math.random() - 0.5) * 10);
+      }
+
+      dummy.position.copy(it.p);
+      dummy.rotation.copy(it.r);
+      dummy.scale.set(1, 1, 1);
+      dummy.updateMatrix();
+      ref.current.setMatrixAt(i, dummy.matrix);
+    }
+    ref.current.instanceMatrix.needsUpdate = true;
+  });
+
+  return (
+    <instancedMesh ref={ref} args={[null, null, count]} castShadow>
+      <boxGeometry args={[0.05, 0.02, 0.08]} />
+      <meshStandardMaterial roughness={0.6} metalness={0.0} vertexColors={false} />
+    </instancedMesh>
+  );
+}
+
+/* --------------------------- UI TEXT --------------------------- */
+function FloatingText({ lines, position, big = false }) {
+  return (
+    <Html center position={position} transform>
+      <div className={`floatingText ${big ? "big" : ""}`}>
+        {lines.map((l, i) => (
+          <div key={i} className={i === 0 ? "line1" : "line2"}>
+            {l}
+          </div>
+        ))}
+      </div>
+    </Html>
+  );
+}
