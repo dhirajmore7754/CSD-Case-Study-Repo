@@ -1,0 +1,1210 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Cinematic Birthday VFX</title>
+  <style>
+    html,body{height:100%;margin:0;background:#05040a;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial}
+    #app{position:fixed;inset:0;overflow:hidden}
+    canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
+    .hud{position:absolute;inset:0;pointer-events:none;padding:14px;display:flex;flex-direction:column;justify-content:space-between}
+    .row{display:flex;gap:10px;align-items:center;justify-content:space-between}
+    .pill{
+      pointer-events:auto;display:flex;gap:10px;align-items:center;
+      padding:10px 12px;border-radius:999px;
+      background:linear-gradient(180deg,rgba(255,255,255,.16),rgba(255,255,255,.08));
+      border:1px solid rgba(255,255,255,.16);
+      backdrop-filter:blur(10px);
+      box-shadow:0 12px 34px rgba(0,0,0,.35);
+      color:rgba(255,255,255,.95);
+    }
+    .dot{width:10px;height:10px;border-radius:50%;background:radial-gradient(circle at 30% 30%,#fff,#ff79c9);box-shadow:0 0 18px rgba(255,121,201,.55)}
+    .btns{pointer-events:auto;display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-end}
+    button{
+      cursor:pointer;border:1px solid rgba(255,255,255,.16);
+      background:linear-gradient(180deg,rgba(255,255,255,.14),rgba(255,255,255,.06));
+      color:rgba(255,255,255,.95);
+      padding:10px 14px;border-radius:16px;font-weight:900;
+      backdrop-filter:blur(10px);
+      transition:transform .12s ease,border-color .12s ease;
+    }
+    button:hover{transform:translateY(-1px);border-color:rgba(255,255,255,.30)}
+    button:active{transform:translateY(0) scale(.99)}
+    .hint{
+      pointer-events:none;max-width:min(720px,92vw);
+      padding:12px 14px;border-radius:18px;
+      background:linear-gradient(180deg,rgba(0,0,0,.35),rgba(0,0,0,.10));
+      border:1px solid rgba(255,255,255,.12);
+      backdrop-filter:blur(8px);
+      color:rgba(255,255,255,.92);
+    }
+    .hint small{display:block;color:rgba(255,255,255,.68);margin-bottom:4px}
+    .popup{
+      position:absolute;left:50%;top:50%;
+      transform:translate(-50%,-50%) scale(.92);
+      opacity:0;text-align:center;
+      padding:18px 18px 20px;border-radius:26px;
+      background:
+        radial-gradient(900px 420px at 50% 0%, rgba(255,121,201,.30), transparent 60%),
+        radial-gradient(900px 420px at 50% 100%, rgba(134,215,255,.22), transparent 65%),
+        linear-gradient(180deg, rgba(255,255,255,.18), rgba(255,255,255,.08));
+      border:2px solid rgba(255,255,255,.22);
+      backdrop-filter:blur(12px);
+      box-shadow:0 25px 90px rgba(0,0,0,.60);
+      pointer-events:none;
+      min-width:min(720px,92vw);
+      color:rgba(255,255,255,.96);
+    }
+    .popup h1{margin:0;font-size:clamp(26px,4.6vw,52px);text-shadow:0 0 28px rgba(255,121,201,.30),0 0 44px rgba(134,215,255,.18)}
+    .popup p{margin:8px 0 0;color:rgba(255,255,255,.78);font-size:clamp(13px,2.4vw,16px);line-height:1.35}
+    .shine{
+      background:linear-gradient(90deg,#ffe29a,#fff,#ff79c9);
+      -webkit-background-clip:text;background-clip:text;color:transparent;
+      filter:drop-shadow(0 0 16px rgba(255,226,154,.22));
+    }
+    .popup.show{opacity:1;transform:translate(-50%,-50%) scale(1);transition:opacity .55s ease,transform .55s cubic-bezier(.18,.9,.26,1.2)}
+    .popup.hide{opacity:0;transform:translate(-50%,-50%) scale(.96);transition:opacity .45s ease,transform .45s ease}
+  </style>
+</head>
+<body>
+<div id="app">
+  <canvas id="main"></canvas>
+  <div class="hud">
+    <div class="row">
+      <div class="pill">
+        <span class="dot"></span>
+        <div>
+          <div style="font-weight:950;line-height:1.05">Cinematic Birthday VFX</div>
+          <div style="font-size:12px;color:rgba(255,255,255,.70)" id="stats">FPS: -- | Quality: Ultra</div>
+        </div>
+      </div>
+      <div class="btns">
+        <button id="start">Start</button>
+        <button id="speed">Speed: 1.60×</button>
+        <button id="quality">Quality: Ultra</button>
+        <button id="replay">Replay</button>
+      </div>
+    </div>
+    <div class="row">
+      <div class="hint">
+        <small id="sceneName">Scene 1 / Garden (cinematic pan)</small>
+        <div id="sceneHint">Birds, butterflies, petals, soft bloom, film grain, realistic shading.</div>
+      </div>
+      <div class="pill"><span style="font-size:12px;color:rgba(255,255,255,.65)">Name:</span><span style="font-weight:950" id="nm">Muskan</span></div>
+    </div>
+  </div>
+
+  <div class="popup" id="popup">
+    <h1>Happy Birthday <span class="shine" id="nmBig">Muskan</span> 🎀✨</h1>
+    <p>May your life feel as peaceful as nature and as magical as anime ✨🌿</p>
+  </div>
+</div>
+
+<script>
+(() => {
+  // ============================
+  // EDIT NAME
+  // ============================
+  const NAME = "Muskan";
+
+  // ============================
+  // PERFORMANCE / FPS NOTES:
+  // - Browser can only render up to your screen refresh (90Hz -> ~90fps).
+  // - This code is optimized: bloom is low-res, particles adapt by quality.
+  // ============================
+
+  // UI
+  const c = document.getElementById("main");
+  const ctx = c.getContext("2d", { alpha:false, desynchronized:true });
+  const statsEl = document.getElementById("stats");
+  const sceneNameEl = document.getElementById("sceneName");
+  const sceneHintEl = document.getElementById("sceneHint");
+  const popup = document.getElementById("popup");
+  document.getElementById("nm").textContent = NAME;
+  document.getElementById("nmBig").textContent = NAME;
+
+  // HiDPI
+  let W=innerWidth, H=innerHeight, dpr=Math.min(devicePixelRatio||1, 2);
+  function resize(){
+    W=innerWidth; H=innerHeight; dpr=Math.min(devicePixelRatio||1, 2);
+    c.width = Math.floor(W*dpr);
+    c.height = Math.floor(H*dpr);
+    c.style.width = W+"px";
+    c.style.height = H+"px";
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+    buildOffscreens();
+  }
+  addEventListener("resize", resize);
+
+  // helpers
+  const rand=(a,b)=>a+Math.random()*(b-a);
+  const clamp01=(x)=>Math.max(0,Math.min(1,x));
+  const lerp=(a,b,t)=>a+(b-a)*t;
+
+  function roundRect(x,y,w,h,r){
+    const rr = Math.min(r,w/2,h/2);
+    ctx.beginPath();
+    ctx.moveTo(x+rr,y);
+    ctx.arcTo(x+w,y,x+w,y+h,rr);
+    ctx.arcTo(x+w,y+h,x,y+h,rr);
+    ctx.arcTo(x,y+h,x,y,rr);
+    ctx.arcTo(x,y,x+w,y,rr);
+    ctx.closePath();
+  }
+
+  // Offscreens: bloom + grain
+  let fxC, fxCtx, fxScale = 0.42;
+  let grainC, grainCtx;
+
+  function buildOffscreens(){
+    fxScale = quality.fxScale;
+    fxC = document.createElement("canvas");
+    fxC.width  = Math.max(2, Math.floor(W * fxScale));
+    fxC.height = Math.max(2, Math.floor(H * fxScale));
+    fxCtx = fxC.getContext("2d");
+
+    grainC = document.createElement("canvas");
+    grainC.width = 140; grainC.height = 140;
+    grainCtx = grainC.getContext("2d");
+    generateGrain();
+  }
+
+  function generateGrain(){
+    // lightweight grain texture
+    const img = grainCtx.createImageData(grainC.width, grainC.height);
+    const d = img.data;
+    for(let i=0;i<d.length;i+=4){
+      const v = (Math.random()*255)|0;
+      d[i]=v; d[i+1]=v; d[i+2]=v; d[i+3]=(Math.random()*90)|0;
+    }
+    grainCtx.putImageData(img,0,0);
+  }
+
+  // Quality presets (Ultra tries for 90fps on 90Hz devices)
+  const qualityPresets = [
+    { name:"Ultra",  petals: 520, leaves: 170, birds: 16, butterflies: 12, dust: 120, fxScale: 0.42, bloomBlur: 14 },
+    { name:"High",   petals: 380, leaves: 120, birds: 14, butterflies: 10, dust:  90, fxScale: 0.38, bloomBlur: 12 },
+    { name:"Medium", petals: 260, leaves:  90, birds: 12, butterflies:  8, dust:  70, fxScale: 0.34, bloomBlur: 10 },
+  ];
+  let qIndex = 0;
+  let quality = qualityPresets[qIndex];
+
+  // Speed presets
+  const speedPresets = [1.6, 1.85, 2.1];
+  let sIndex = 0;
+  let speed = speedPresets[sIndex];
+
+  // Playback
+  let started = false;
+  let t = 0;        // global time (seconds)
+  let dt = 0;       // last delta
+  let last = performance.now();
+
+  // FPS meter
+  let fps = 0, fpsAcc = 0, fpsCount = 0;
+  function fpsTick(d){
+    fpsAcc += d; fpsCount++;
+    if(fpsAcc >= 0.5){
+      fps = Math.round(fpsCount / fpsAcc);
+      fpsAcc = 0; fpsCount = 0;
+      statsEl.textContent = `FPS: ${fps} | Quality: ${quality.name}`;
+      // auto-adapt if device struggling
+      if(fps < 70 && qIndex < qualityPresets.length-1){
+        // drop quality softly
+        qIndex++;
+        quality = qualityPresets[qIndex];
+        buildOffscreens();
+      }
+    }
+  }
+
+  // Popup controls
+  function showPopup(){ popup.classList.remove("hide"); popup.classList.add("show"); }
+  function hidePopup(){ popup.classList.remove("show"); popup.classList.add("hide"); }
+
+  // ============================
+  // Cinematic timeline (~90s loop)
+  // ============================
+  const scenes = [
+    { name:"Scene 1 / Garden (cinematic pan)", dur: 34, hint:"Girl on chair + realistic shading + birds/butterflies + bloom + grain." },
+    { name:"Scene 2 / Gift + Confetti",        dur: 18, hint:"Gift opens, heart confetti burst, birds pass close to camera." },
+    { name:"Scene 3 / Golden Hour + Fireworks",dur: 24, hint:"Warm sunset tone, star fireworks, lens glow." },
+    { name:"Scene 4 / Wish Card Finale",       dur: 14, hint:"Large cinematic card + floating bokeh + gentle nature." },
+  ];
+  const totalDur = scenes.reduce((s,x)=>s+x.dur,0);
+  const fadeDur = 1.0;
+
+  function sceneAt(time){
+    let tt = ((time % totalDur) + totalDur) % totalDur;
+    let acc = 0;
+    for(let i=0;i<scenes.length;i++){
+      const seg = scenes[i];
+      if(tt < acc + seg.dur) return {i, local:tt-acc, seg};
+      acc += seg.dur;
+    }
+    return {i:0,local:0,seg:scenes[0]};
+  }
+  function fadeAlpha(local, dur){
+    const aIn = clamp01(local / fadeDur);
+    const aOut = clamp01((dur - local) / fadeDur);
+    return Math.min(aIn, aOut);
+  }
+
+  // ============================
+  // World objects (procedural)
+  // ============================
+  function makeBird(){
+    const depth = rand(0.25, 0.95);
+    return {
+      x: rand(-200, W+200),
+      y: rand(H*0.08, H*0.55),
+      vx: rand(60, 160) * (Math.random()<0.5 ? 1 : -1),
+      depth,
+      wing: rand(0, Math.PI*2),
+      size: rand(12, 26) * (1.18 - depth),
+      col: depth < 0.55 ? "rgba(10,10,18,.78)" : "rgba(25,25,35,.55)"
+    };
+  }
+
+  function makePetal(){
+    return { x: rand(-120,W+120), y: rand(-H,H),
+      vx: rand(-18,18), vy: rand(26,60),
+      r: rand(0,Math.PI*2), vr: rand(-2.6,2.6),
+      s: rand(4,9), a: rand(0.18,0.42)
+    };
+  }
+  function makeLeaf(){
+    return { x: rand(-140,W+140), y: rand(-H*0.2,H),
+      vx: rand(14,36), vy: rand(28,68),
+      r: rand(0,Math.PI*2), vr: rand(-3.2,3.2),
+      s: rand(6,14),
+      col: ["rgba(140,255,200,.30)","rgba(255,226,154,.22)","rgba(255,121,201,.16)"][(Math.random()*3)|0]
+    };
+  }
+  function makeDust(){
+    return { x: rand(0,W), y: rand(0,H*0.75), z: rand(0.2,1.0), ph: rand(0,Math.PI*2) };
+  }
+  function makeButterfly(){
+    return { x: rand(W*0.16, W*0.58), y: rand(H*0.34, H*0.70),
+      vx: rand(-28,28), vy: rand(-22,22), ph: rand(0,Math.PI*2), s: rand(8,16) };
+  }
+
+  let birds=[], petals=[], leaves=[], dust=[], butterflies=[];
+  function rebuildEntities(){
+    birds = Array.from({length: quality.birds}, makeBird);
+    petals = Array.from({length: quality.petals}, makePetal);
+    leaves = Array.from({length: quality.leaves}, makeLeaf);
+    dust = Array.from({length: quality.dust}, makeDust);
+    butterflies = Array.from({length: quality.butterflies}, makeButterfly);
+  }
+
+  // Confetti + fireworks (pooled)
+  let confetti = [];
+  function burstConfetti(){
+    confetti = Array.from({length: 520}, () => ({
+      x: W*0.66 + rand(-60,60), y: H*0.66 + rand(-50,50),
+      vx: rand(-320,320), vy: rand(-640,-180), g: rand(700, 980),
+      r: rand(0, Math.PI*2), vr: rand(-11,11), s: rand(6, 16),
+      life: rand(1.6, 2.6),
+      kind: Math.random()<0.72 ? "heart" : "star",
+      col: ["#ff79c9","#86d7ff","#ffe29a","#8bffc8","#ffffff"][(Math.random()*5)|0]
+    }));
+  }
+
+  let fireworks = [];
+  function spawnFirework(){
+    const x = rand(W*0.22, W*0.78);
+    const y = rand(H*0.12, H*0.42);
+    const col = ["#ff79c9","#86d7ff","#ffe29a","#8bffc8","#ffffff"][(Math.random()*5)|0];
+    const parts = Array.from({length: 140}, () => {
+      const a = rand(0, Math.PI*2);
+      const sp = rand(110, 360);
+      return {x,y,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp,life:rand(1.2,1.85)};
+    });
+    fireworks.push({col, parts});
+  }
+
+  // ============================
+  // Draw helpers (cinematic look)
+  // ============================
+  function drawSky(dayMood, warm){
+    const g = ctx.createLinearGradient(0,0,0,H);
+    if(warm){
+      g.addColorStop(0, "#ffcc9a");
+      g.addColorStop(0.35, "#cda3ff");
+      g.addColorStop(1, "#06040b");
+    }else if(dayMood < 0.5){
+      g.addColorStop(0, "#86d7ff");
+      g.addColorStop(0.45, "#b7a7ff");
+      g.addColorStop(1, "#06040b");
+    }else{
+      g.addColorStop(0, "#4a60b8");
+      g.addColorStop(0.45, "#7a74d8");
+      g.addColorStop(1, "#06040b");
+    }
+    ctx.fillStyle = g;
+    ctx.fillRect(0,0,W,H);
+
+    // sun glow (also to bloom pass)
+    const sx = W*0.16 + Math.sin(t*0.06)*W*0.06;
+    const sy = H*0.14 + Math.cos(t*0.05)*H*0.03;
+    ctx.save();
+    ctx.globalAlpha = 0.18;
+    ctx.fillStyle = warm ? "rgba(255,226,154,.95)" : "rgba(255,235,190,.95)";
+    ctx.shadowColor = warm ? "rgba(255,200,120,.95)" : "rgba(255,226,154,.85)";
+    ctx.shadowBlur = 40;
+    ctx.beginPath(); ctx.arc(sx,sy,56,0,Math.PI*2); ctx.fill();
+    ctx.restore();
+
+    // subtle sky sparkles
+    ctx.save();
+    ctx.globalAlpha = 0.08;
+    ctx.fillStyle = "#ffffff";
+    for(let i=0;i<220;i++){
+      const x = (i*97 + (t*60|0))%W;
+      const y = (i*71)%Math.max(1,(H*0.55|0));
+      ctx.fillRect(x,y,1,1);
+    }
+    ctx.restore();
+  }
+
+  function drawCloud(x,y,s,alpha){
+    ctx.save();
+    ctx.translate(x,y);
+    ctx.scale(s,s);
+    ctx.globalAlpha = alpha;
+    ctx.filter = "blur(0.8px)";
+    ctx.fillStyle = "rgba(255,255,255,.95)";
+    ctx.beginPath();
+    ctx.ellipse(0,0,78,48,0,0,Math.PI*2);
+    ctx.ellipse(68,-16,64,42,0,0,Math.PI*2);
+    ctx.ellipse(-68,-12,58,40,0,0,Math.PI*2);
+    ctx.fill();
+    ctx.filter = "none";
+    ctx.restore();
+  }
+
+  function drawHills(warm){
+    ctx.save();
+    ctx.globalAlpha = 0.92;
+
+    let g = ctx.createLinearGradient(0,H*0.45,0,H);
+    g.addColorStop(0, warm ? "rgba(90,70,120,.22)" : "rgba(30,40,80,.28)");
+    g.addColorStop(1, "rgba(0,0,0,.22)");
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.moveTo(0, H*0.62);
+    ctx.quadraticCurveTo(W*0.22, H*0.55, W*0.5, H*0.62);
+    ctx.quadraticCurveTo(W*0.78, H*0.70, W, H*0.62);
+    ctx.lineTo(W,H); ctx.lineTo(0,H); ctx.closePath();
+    ctx.fill();
+
+    g = ctx.createLinearGradient(0,H*0.55,0,H);
+    g.addColorStop(0, "rgba(0,0,0,.16)");
+    g.addColorStop(1, "rgba(0,0,0,.36)");
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.moveTo(0, H*0.70);
+    ctx.quadraticCurveTo(W*0.35, H*0.63, W*0.62, H*0.72);
+    ctx.quadraticCurveTo(W*0.82, H*0.80, W, H*0.74);
+    ctx.lineTo(W,H); ctx.lineTo(0,H); ctx.closePath();
+    ctx.fill();
+
+    ctx.restore();
+  }
+
+  function drawGround(){
+    const g = ctx.createLinearGradient(0,H*0.62,0,H);
+    g.addColorStop(0, "rgba(139,255,200,.88)");
+    g.addColorStop(1, "rgba(24,116,84,.74)");
+    ctx.fillStyle = g;
+    ctx.fillRect(0,H*0.62,W,H*0.38);
+
+    // grass sparkle
+    ctx.save();
+    ctx.globalAlpha = 0.10;
+    ctx.fillStyle = "#ffffff";
+    for(let i=0;i<700;i++){
+      const x = (i*53 + (t*70|0))%W;
+      const y = H*0.62 + ((i*97)%(H*0.38));
+      ctx.fillRect(x,y,1,1);
+    }
+    ctx.restore();
+  }
+
+  function drawSakuraTree(x,y,scale,wind){
+    ctx.save();
+    ctx.translate(x,y);
+    ctx.scale(scale,scale);
+
+    // trunk (more realistic gradient)
+    const tg = ctx.createLinearGradient(-12,0,12,150);
+    tg.addColorStop(0, "rgba(95,55,65,.96)");
+    tg.addColorStop(1, "rgba(35,18,26,.96)");
+    ctx.strokeStyle = tg;
+    ctx.lineWidth = 12;
+    ctx.lineCap = "round";
+    ctx.beginPath();
+    ctx.moveTo(0,150);
+    ctx.quadraticCurveTo(-14 + wind*4, 92, -8 + wind*2, 34);
+    ctx.stroke();
+
+    // branches
+    ctx.lineWidth = 7;
+    ctx.beginPath();
+    ctx.moveTo(-8,58);
+    ctx.quadraticCurveTo(-42 + wind*5, 36, -62 + wind*5, 10);
+    ctx.moveTo(-8,52);
+    ctx.quadraticCurveTo(16 + wind*5, 32, 40 + wind*5, 8);
+    ctx.stroke();
+
+    // canopy blobs with lighting
+    const blobs = [
+      {x:-74,y:18,r:58},{x:0,y:-2,r:70},{x:78,y:20,r:54},
+      {x:-28,y:-46,r:48},{x:34,y:-52,r:46}
+    ];
+
+    // glow layer
+    ctx.save();
+    ctx.globalAlpha = 0.28;
+    ctx.fillStyle = "#ff79c9";
+    ctx.filter = "blur(12px)";
+    blobs.forEach(b=>{
+      ctx.beginPath();
+      ctx.arc(b.x + wind*9, b.y, b.r, 0, Math.PI*2);
+      ctx.fill();
+    });
+    ctx.restore();
+    ctx.filter = "none";
+
+    blobs.forEach(b=>{
+      const cg = ctx.createRadialGradient(b.x-20, b.y-20, 10, b.x, b.y, b.r);
+      cg.addColorStop(0, "rgba(255,255,255,.55)");
+      cg.addColorStop(0.25, "rgba(255,226,154,.28)");
+      cg.addColorStop(0.62, "rgba(255,166,221,.96)");
+      cg.addColorStop(1, "rgba(255,121,201,.68)");
+      ctx.fillStyle = cg;
+      ctx.beginPath();
+      ctx.arc(b.x + wind*9, b.y, b.r, 0, Math.PI*2);
+      ctx.fill();
+      ctx.strokeStyle = "rgba(42,23,48,.75)";
+      ctx.lineWidth = 5;
+      ctx.stroke();
+    });
+
+    ctx.restore();
+  }
+
+  function drawBird(b){
+    const flap = Math.sin(b.wing)*0.9;
+    const wingSpan = b.size * (0.9 + 0.25*Math.abs(flap));
+    ctx.save();
+    ctx.translate(b.x, b.y);
+    ctx.scale(b.vx>0 ? 1 : -1, 1);
+    ctx.strokeStyle = b.col;
+    ctx.globalAlpha = 0.95;
+    ctx.lineWidth = 2.2;
+
+    // body + wings
+    ctx.beginPath();
+    ctx.arc(0,0,b.size*0.20,Math.PI*0.2,Math.PI*1.8);
+    ctx.moveTo(0,0);
+    ctx.quadraticCurveTo( wingSpan*0.55, -b.size*(0.40+0.35*flap), wingSpan, 0);
+    ctx.moveTo(0,0);
+    ctx.quadraticCurveTo(-wingSpan*0.55, -b.size*(0.40+0.35*flap), -wingSpan, 0);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  function drawHeart(x,y,size,color,alpha){
+    ctx.save();
+    ctx.translate(x,y);
+    ctx.scale(size/20, size/20);
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.moveTo(0, 6);
+    ctx.bezierCurveTo(10, -2, 8, -16, 0, -10);
+    ctx.bezierCurveTo(-8, -16, -10, -2, 0, 6);
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+  }
+
+  function drawStar(x,y,size,color,alpha){
+    ctx.save();
+    ctx.translate(x,y);
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    const spikes=5, outer=size, inner=size*0.45;
+    let rot = Math.PI/2*3;
+    ctx.moveTo(0,-outer);
+    for(let i=0;i<spikes;i++){
+      ctx.lineTo(Math.cos(rot)*outer, Math.sin(rot)*outer); rot += Math.PI/spikes;
+      ctx.lineTo(Math.cos(rot)*inner, Math.sin(rot)*inner); rot += Math.PI/spikes;
+    }
+    ctx.closePath(); ctx.fill();
+    ctx.restore();
+  }
+
+  function drawButterfly(b){
+    const flap = Math.sin(b.ph)*0.9;
+    ctx.save();
+    ctx.translate(b.x,b.y);
+    ctx.globalAlpha = 0.9;
+    ctx.shadowColor = "rgba(255,121,201,.65)";
+    ctx.shadowBlur = 14;
+    ctx.fillStyle = "rgba(255,121,201,.50)";
+    ctx.strokeStyle = "rgba(42,23,48,.55)";
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.ellipse(-b.s*0.6, 0, b.s*(0.55+0.25*Math.abs(flap)), b.s*(0.40+0.20*Math.abs(flap)), -0.15, 0, Math.PI*2);
+    ctx.ellipse( b.s*0.6, 0, b.s*(0.55+0.25*Math.abs(flap)), b.s*(0.40+0.20*Math.abs(flap)),  0.15, 0, Math.PI*2);
+    ctx.fill(); ctx.stroke();
+    ctx.shadowBlur = 0;
+    ctx.strokeStyle = "rgba(15,15,20,.55)";
+    ctx.beginPath();
+    ctx.moveTo(0,-b.s*0.35); ctx.lineTo(0,b.s*0.35);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  function drawChair(x,y){
+    ctx.save();
+    ctx.translate(x,y);
+    ctx.strokeStyle = "rgba(42,23,48,.88)";
+    ctx.lineWidth = 5;
+
+    // wood-ish gradient
+    let g = ctx.createLinearGradient(-80,0,80,0);
+    g.addColorStop(0,"#a88967"); g.addColorStop(1,"#d4b28a");
+    ctx.fillStyle = g;
+    roundRect(-78, 12, 156, 28, 12); ctx.fill(); ctx.stroke();
+
+    g = ctx.createLinearGradient(-78,-105,78,35);
+    g.addColorStop(0,"#b18f6c"); g.addColorStop(1,"#e2c39b");
+    ctx.fillStyle = g;
+    roundRect(-78, -98, 156, 116, 16); ctx.fill(); ctx.stroke();
+
+    // legs
+    ctx.lineWidth = 6;
+    ctx.beginPath();
+    ctx.moveTo(-60, 40); ctx.lineTo(-60, 104);
+    ctx.moveTo( 60, 40); ctx.lineTo( 60, 104);
+    ctx.moveTo(-60, 40); ctx.lineTo(-74, 104);
+    ctx.moveTo( 60, 40); ctx.lineTo( 74, 104);
+    ctx.stroke();
+
+    // wood lines
+    ctx.save();
+    ctx.globalAlpha = 0.14;
+    ctx.strokeStyle = "rgba(60,35,20,.65)";
+    ctx.lineWidth = 2;
+    for(let i=-60;i<=60;i+=12){
+      ctx.beginPath(); ctx.moveTo(i,-94); ctx.lineTo(i,104); ctx.stroke();
+    }
+    ctx.restore();
+
+    ctx.restore();
+  }
+
+  function drawGirl(x,y,breath,look){
+    ctx.save();
+    ctx.translate(x, y + breath);
+
+    // ground shadow
+    ctx.save();
+    ctx.globalAlpha = 0.24;
+    ctx.fillStyle = "rgba(0,0,0,.80)";
+    ctx.filter = "blur(10px)";
+    ctx.beginPath();
+    ctx.ellipse(0, 112, 70, 18, 0, 0, Math.PI*2);
+    ctx.fill();
+    ctx.filter = "none";
+    ctx.restore();
+
+    // skin + hair gradients
+    const skin = ctx.createRadialGradient(-18,-150,10,0,-125,72);
+    skin.addColorStop(0,"rgba(255,255,255,.88)");
+    skin.addColorStop(0.30,"rgba(255,226,154,.26)");
+    skin.addColorStop(1,"#ffd7cf");
+
+    const hair = ctx.createLinearGradient(-70,-220,70,-80);
+    hair.addColorStop(0,"#20121f");
+    hair.addColorStop(1,"#3a2440");
+
+    // head glow (to bloom pass too)
+    ctx.save();
+    ctx.globalAlpha = 0.14;
+    ctx.fillStyle = "rgba(255,121,201,.9)";
+    ctx.shadowColor = "rgba(255,121,201,.8)";
+    ctx.shadowBlur = 30;
+    ctx.beginPath(); ctx.arc(0,-120,62,0,Math.PI*2); ctx.fill();
+    ctx.restore();
+
+    // head
+    ctx.fillStyle = skin;
+    ctx.strokeStyle = "rgba(42,23,48,.88)";
+    ctx.lineWidth = 5;
+    ctx.beginPath(); ctx.arc(0,-120,58,0,Math.PI*2); ctx.fill(); ctx.stroke();
+
+    // hair cap
+    ctx.fillStyle = hair;
+    ctx.beginPath();
+    ctx.arc(0,-132,60,Math.PI*0.06,Math.PI*0.94,true);
+    ctx.closePath(); ctx.fill(); ctx.stroke();
+
+    // bangs
+    ctx.fillStyle = hair;
+    ctx.beginPath();
+    ctx.ellipse(-20,-124,22,18,0.25,0,Math.PI*2);
+    ctx.ellipse( 20,-124,22,18,-0.25,0,Math.PI*2);
+    ctx.fill();
+
+    // eyes
+    const lx = look*5;
+    ctx.fillStyle="#0f0f14";
+    ctx.beginPath(); ctx.arc(-20+lx,-118,7,0,Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc( 20+lx,-118,7,0,Math.PI*2); ctx.fill();
+
+    // eye shine
+    ctx.fillStyle="rgba(255,255,255,.95)";
+    ctx.beginPath(); ctx.arc(-17+lx,-121,2.4,0,Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc( 23+lx,-121,2.4,0,Math.PI*2); ctx.fill();
+
+    // blush
+    ctx.fillStyle="rgba(255,121,201,.30)";
+    ctx.beginPath(); ctx.arc(-38,-100,10,0,Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc( 38,-100,10,0,Math.PI*2); ctx.fill();
+
+    // dress (shaded)
+    const dress = ctx.createLinearGradient(-50,-80,50,70);
+    dress.addColorStop(0,"#4db8ff");
+    dress.addColorStop(1,"#a8ebff");
+    ctx.fillStyle = dress;
+    roundRect(-36,-68,72,78,24); ctx.fill(); ctx.strokeStyle="rgba(42,23,48,.88)"; ctx.lineWidth=5; ctx.stroke();
+
+    // skirt
+    ctx.beginPath();
+    ctx.moveTo(-52, 8); ctx.lineTo(52, 8); ctx.lineTo(0, 62); ctx.closePath();
+    ctx.fill(); ctx.stroke();
+
+    // arms (soft)
+    ctx.lineWidth = 8;
+    ctx.strokeStyle = "rgba(255,215,207,.95)";
+    ctx.beginPath();
+    ctx.moveTo(-32,-34); ctx.quadraticCurveTo(-80,-12,-60,20);
+    ctx.moveTo( 32,-34); ctx.quadraticCurveTo( 80,-12, 60,20);
+    ctx.stroke();
+
+    // legs (sitting)
+    ctx.lineWidth=10;
+    ctx.strokeStyle="rgba(255,255,255,.95)";
+    ctx.beginPath();
+    ctx.moveTo(-12,34); ctx.quadraticCurveTo(-22,62,-12,90);
+    ctx.moveTo( 12,34); ctx.quadraticCurveTo( 22,62, 12,90);
+    ctx.stroke();
+
+    // shoes
+    ctx.fillStyle="#ff79c9";
+    ctx.strokeStyle="rgba(42,23,48,.88)";
+    ctx.lineWidth=4;
+    roundRect(-28,82,28,16,10); ctx.fill(); ctx.stroke();
+    roundRect(0,  82,28,16,10); ctx.fill(); ctx.stroke();
+
+    ctx.restore();
+  }
+
+  function drawGift(x,y,open01){
+    ctx.save(); ctx.translate(x,y);
+    ctx.strokeStyle="rgba(42,23,48,.88)"; ctx.lineWidth=5;
+
+    // base glow to bloom
+    ctx.save();
+    ctx.globalAlpha=0.18;
+    ctx.fillStyle="rgba(255,121,201,.92)";
+    ctx.shadowColor="rgba(255,121,201,.85)";
+    ctx.shadowBlur=26;
+    ctx.beginPath(); ctx.roundRect?.(-86,-36,172,132,22);
+    // fallback:
+    ctx.beginPath();
+    const rr=22; const w=172,h=132; const xx=-86,yy=-36;
+    ctx.moveTo(xx+rr,yy); ctx.arcTo(xx+w,yy,xx+w,yy+h,rr);
+    ctx.arcTo(xx+w,yy+h,xx,yy+h,rr); ctx.arcTo(xx,yy+h,xx,yy,rr);
+    ctx.arcTo(xx,yy,xx+w,yy,rr); ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+
+    // box
+    ctx.fillStyle="#ff79c9";
+    ctx.beginPath();
+    const rr2=22; const w2=164,h2=124; const x2=-82,y2=-32;
+    ctx.moveTo(x2+rr2,y2); ctx.arcTo(x2+w2,y2,x2+w2,y2+h2,rr2);
+    ctx.arcTo(x2+w2,y2+h2,x2,y2+h2,rr2); ctx.arcTo(x2,y2+h2,x2,y2,rr2);
+    ctx.arcTo(x2,y2,x2+w2,y2,rr2); ctx.closePath();
+    ctx.fill(); ctx.stroke();
+
+    // ribbon
+    ctx.fillStyle="#ffe29a";
+    const rib=24;
+    ctx.beginPath();
+    const rx=-rib/2, ry=y2, rw=rib, rh=h2;
+    const rrr=12;
+    ctx.moveTo(rx+rrr,ry); ctx.arcTo(rx+rw,ry,rx+rw,ry+rh,rrr);
+    ctx.arcTo(rx+rw,ry+rh,rx,ry+rh,rrr); ctx.arcTo(rx,ry+rh,rx,ry,rrr);
+    ctx.arcTo(rx,ry,rx+rw,ry,rrr); ctx.closePath();
+    ctx.fill(); ctx.stroke();
+
+    // lid
+    const lidRot = -1.22*open01;
+    ctx.save();
+    ctx.translate(0,-48);
+    ctx.rotate(lidRot);
+    ctx.translate(0,-10);
+    ctx.fillStyle="#ff79c9";
+    // lid rect
+    const lx=-88, ly=-20, lw=176, lh=40, lr=16;
+    ctx.beginPath();
+    ctx.moveTo(lx+lr,ly); ctx.arcTo(lx+lw,ly,lx+lw,ly+lh,lr);
+    ctx.arcTo(lx+lw,ly+lh,lx,ly+lh,lr); ctx.arcTo(lx,ly+lh,lx,ly,lr);
+    ctx.arcTo(lx,ly,lx+lw,ly,lr); ctx.closePath();
+    ctx.fill(); ctx.stroke();
+
+    // lid ribbon
+    ctx.fillStyle="#ffe29a";
+    const lrx=-rib/2, lry=ly, lrw=rib, lrh=lh, lrr=12;
+    ctx.beginPath();
+    ctx.moveTo(lrx+lrr,lry); ctx.arcTo(lrx+lrw,lry,lrx+lrw,lry+lrh,lrr);
+    ctx.arcTo(lrx+lrw,lry+lrh,lrx,lry+lrh,lrr); ctx.arcTo(lrx,lry+lrh,lrx,lry,lrr);
+    ctx.arcTo(lrx,lry,lrx+lrw,lry,lrr); ctx.closePath();
+    ctx.fill(); ctx.stroke();
+    ctx.restore();
+
+    // bow
+    drawHeart(-18,-64-open01*10,18,"#ffe29a",1);
+    drawHeart( 18,-64-open01*10,18,"#ffe29a",1);
+
+    ctx.restore();
+  }
+
+  function drawWishCard(alpha){
+    const cx=W/2, cy=H*0.42;
+    const w=Math.min(W*0.82,860);
+    const h=Math.min(H*0.40,310);
+
+    // glow (also bloom)
+    ctx.save();
+    ctx.globalAlpha = alpha*0.24;
+    ctx.fillStyle="rgba(255,121,201,.92)";
+    ctx.shadowColor="rgba(255,121,201,.85)";
+    ctx.shadowBlur=34;
+    ctx.beginPath();
+    const r=26; const x=cx-w/2, y=cy-h/2;
+    ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r);
+    ctx.arcTo(x+w,y+h,x,y+h,r); ctx.arcTo(x,y+h,x,y,r);
+    ctx.arcTo(x,y,x+w,y,r); ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+
+    // card
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle="rgba(255,255,255,.92)";
+    ctx.strokeStyle="rgba(42,23,48,.88)";
+    ctx.lineWidth=6;
+    roundRect(x,y,w,h,26); ctx.fill(); ctx.stroke();
+
+    ctx.strokeStyle="rgba(255,121,201,.80)";
+    ctx.lineWidth=6;
+    roundRect(x+10,y+10,w-20,h-20,22); ctx.stroke();
+
+    ctx.textAlign="center";
+    ctx.fillStyle="#2a1730";
+    ctx.font="950 44px system-ui,-apple-system,Segoe UI,Roboto,Arial";
+    ctx.fillText(`Happy Birthday ${NAME}!`, cx, cy-44);
+
+    ctx.font="800 22px system-ui,-apple-system,Segoe UI,Roboto,Arial";
+    ctx.fillStyle="#5b3a6e";
+    ctx.fillText("Cinematic year. Calm heart. Bright smile ✨", cx, cy+2);
+
+    ctx.fillStyle="#6a5aa8";
+    ctx.fillText("You deserve the sweetest surprises 🎀", cx, cy+38);
+    ctx.restore();
+  }
+
+  function vignette(amount){
+    const g = ctx.createRadialGradient(W/2,H/2,Math.min(W,H)*0.18, W/2,H/2, Math.max(W,H)*0.72);
+    g.addColorStop(0,"rgba(0,0,0,0)");
+    g.addColorStop(1,`rgba(0,0,0,${amount})`);
+    ctx.fillStyle=g;
+    ctx.fillRect(0,0,W,H);
+  }
+
+  // Bloom pass: draw only bright things into fx, blur low-res, screen blend
+  function bloomBegin(){
+    fxCtx.setTransform(1,0,0,1,0,0);
+    fxCtx.clearRect(0,0,fxC.width,fxC.height);
+    fxCtx.save();
+    fxCtx.scale(fxScale, fxScale);
+  }
+  function bloomEnd(){
+    fxCtx.restore();
+    // blur and composite
+    ctx.save();
+    ctx.globalCompositeOperation = "screen";
+    ctx.globalAlpha = 0.80;
+    ctx.filter = `blur(${quality.bloomBlur}px)`;
+    ctx.drawImage(fxC, 0, 0, W, H);
+    ctx.filter = "none";
+    ctx.globalAlpha = 0.38;
+    // second pass for smoother bloom
+    ctx.filter = `blur(${Math.max(6,quality.bloomBlur-4)}px)`;
+    ctx.drawImage(fxC, 0, 0, W, H);
+    ctx.filter = "none";
+    ctx.globalCompositeOperation = "source-over";
+    ctx.restore();
+  }
+
+  function drawFilmGrain(){
+    // re-generate grain sometimes (cheap)
+    if(((t*60)|0) % 9 === 0) generateGrain();
+    ctx.save();
+    ctx.globalAlpha = 0.10;
+    ctx.globalCompositeOperation = "overlay";
+    const ox = (t*22)%grainC.width;
+    const oy = (t*13)%grainC.height;
+    ctx.drawImage(grainC, -ox, -oy, W+grainC.width, H+grainC.height);
+    ctx.globalCompositeOperation = "source-over";
+    ctx.restore();
+  }
+
+  // ============================
+  // Simulation update
+  // ============================
+  function updateWorld(){
+    // slow wind
+    const wind = Math.sin(t*0.55)*0.9;
+
+    // birds
+    for(const b of birds){
+      b.wing += dt*speed*8.8*(0.6 + (1-b.depth));
+      b.x += b.vx*dt*speed*(0.62 + (1-b.depth));
+      b.y += Math.sin(t*0.7 + b.depth*5) * dt*speed*10*0.35;
+      if(b.x > W+240) b.x = -240;
+      if(b.x < -240) b.x = W+240;
+    }
+
+    // petals
+    for(const p of petals){
+      p.x += (p.vx + Math.sin(t*0.7 + p.y*0.01)*14 + wind*8)*dt*speed;
+      p.y += p.vy*dt*speed;
+      p.r += p.vr*dt*speed;
+      if(p.y > H+40){ p.y = -rand(40,H*0.65); p.x = rand(-160,W+160); }
+      if(p.x > W+220) p.x = -220;
+      if(p.x < -220) p.x = W+220;
+    }
+
+    // leaves
+    for(const l of leaves){
+      l.x += (l.vx + Math.sin(t*1.1 + l.y*0.01)*20 + wind*12)*dt*speed;
+      l.y += (l.vy + Math.cos(t*0.8 + l.x*0.01)*10)*dt*speed;
+      l.r += l.vr*dt*speed;
+      if(l.y > H+80){ l.y = -rand(40,H*0.4); l.x = rand(-200,W+200); }
+      if(l.x > W+260) l.x = -260;
+    }
+
+    // butterflies
+    for(const b of butterflies){
+      b.ph += dt*speed*7.0;
+      b.x += (b.vx + Math.sin(t*1.5 + b.ph)*14)*dt*speed;
+      b.y += (b.vy + Math.cos(t*1.4 + b.ph)*12)*dt*speed;
+      const minX=W*0.14, maxX=W*0.60, minY=H*0.34, maxY=H*0.72;
+      if(b.x<minX) b.x=minX; if(b.x>maxX) b.x=maxX;
+      if(b.y<minY) b.y=minY; if(b.y>maxY) b.y=maxY;
+    }
+
+    // confetti
+    for(const cf of confetti){
+      cf.life -= dt;
+      cf.vy += cf.g*dt;
+      cf.x += cf.vx*dt;
+      cf.y += cf.vy*dt;
+      cf.r += cf.vr*dt;
+    }
+    confetti = confetti.filter(c => c.life > 0 && c.y < H+200);
+
+    // fireworks
+    for(const fw of fireworks){
+      for(const pt of fw.parts){
+        pt.life -= dt;
+        pt.vx *= (1 - 0.80*dt);
+        pt.vy *= (1 - 0.80*dt);
+        pt.vy += 150*dt;
+        pt.x += pt.vx*dt;
+        pt.y += pt.vy*dt;
+      }
+      fw.parts = fw.parts.filter(p=>p.life>0);
+    }
+    fireworks = fireworks.filter(f=>f.parts.length>0);
+
+    return wind;
+  }
+
+  // ============================
+  // Rendering per scene (cinematic camera)
+  // ============================
+  function renderScene(si, local){
+    const a = fadeAlpha(local, scenes[si].dur);
+    sceneNameEl.textContent = scenes[si].name;
+    sceneHintEl.textContent = scenes[si].hint;
+
+    // popup timing
+    if(si===0 && local>2 && local<11) showPopup();
+    else if(si===2 && local>1.6 && local<8.5) showPopup();
+    else hidePopup();
+
+    // cinematic camera: slow pan + slight zoom (Ken Burns)
+    const baseZoom = (si===2) ? 1.04 : 1.02;
+    const zoom = baseZoom + 0.015*Math.sin(t*0.35);
+    const camX = lerp(-W*0.06, W*0.06, 0.5+0.5*Math.sin(t*0.08 + si));
+    const camY = lerp(-H*0.03, H*0.03, 0.5+0.5*Math.cos(t*0.07 + si));
+
+    // mood
+    const warm = (si===2);       // golden hour
+    const dayMood = warm ? 0.25 : (si===3 ? 0.40 : 0.10);
+
+    // draw base with camera transform
+    ctx.save();
+    ctx.translate(W/2, H/2);
+    ctx.scale(zoom, zoom);
+    ctx.translate(-W/2 + camX, -H/2 + camY);
+
+    // base world
+    drawSky(dayMood, warm);
+
+    // clouds (cheap procedural drift)
+    const cloudT = t*20;
+    drawCloud((cloudT*0.7)% (W+380) - 220, H*0.16, 1.55, 0.90);
+    drawCloud((cloudT*0.5 + 240)% (W+380) - 220, H*0.22, 1.25, 0.86);
+    drawCloud((cloudT*0.35 + 520)% (W+380) - 220, H*0.12, 1.90, 0.82);
+
+    drawHills(warm);
+    drawGround();
+
+    // trees (parallax-ish using camera)
+    const baseY = H*0.62;
+    const wind = Math.sin(t*0.55)*0.9;
+    drawSakuraTree(W*0.12, baseY-40, 0.92, wind);
+    drawSakuraTree(W*0.88, baseY-32, 1.06, -wind*0.6);
+    drawSakuraTree(W*0.72, baseY-24, 0.74, wind*0.8);
+
+    // birds (sorted far->near)
+    birds.slice().sort((a,b)=>a.depth-b.depth).forEach(drawBird);
+
+    // petals + leaves (cinematic depth vibe)
+    ctx.save();
+    for(const p of petals){
+      ctx.save();
+      ctx.translate(p.x, p.y);
+      ctx.rotate(p.r + wind*0.06);
+      ctx.globalAlpha = p.a * (warm ? 0.65 : 1.0);
+      ctx.shadowColor = "rgba(255,121,201,.40)";
+      ctx.shadowBlur = 12;
+      drawHeart(0,0,p.s,"rgba(255,166,221,.95)", p.a);
+      ctx.restore();
+    }
+    for(const l of leaves){
+      ctx.save();
+      ctx.translate(l.x,l.y);
+      ctx.rotate(l.r);
+      ctx.globalAlpha = 0.30;
+      ctx.shadowColor = "rgba(140,255,200,.35)";
+      ctx.shadowBlur = 10;
+      ctx.fillStyle = l.col;
+      ctx.beginPath();
+      ctx.ellipse(0,0, l.s*0.9, l.s*0.5, 0.4, 0, Math.PI*2);
+      ctx.fill();
+      ctx.restore();
+    }
+    ctx.restore();
+
+    // foreground girl + chair (scenes 0/1 mainly)
+    const chairX = W*0.30, chairY = H*0.62 + 60;
+    if(si===0 || si===1 || si===3){
+      drawChair(chairX, chairY);
+      const breath = Math.sin(t*2.2)*3.6;
+      const look = Math.sin(t*0.9)*0.7;
+      drawGirl(chairX, chairY, breath, look);
+
+      // butterflies
+      if(si===0 || si===1){
+        for(const b of butterflies) drawButterfly(b);
+      }
+    }
+
+    // Scene specific:
+    if(si===1){
+      // gift + confetti
+      const open01 = clamp01((local-0.4)/1.2);
+      drawGift(W*0.66, H*0.62 + 70, open01);
+      // draw confetti
+      for(const cf of confetti){
+        const al = clamp01(cf.life/2.6);
+        ctx.save();
+        ctx.translate(cf.x, cf.y);
+        ctx.rotate(cf.r);
+        ctx.globalAlpha = al;
+        ctx.shadowColor = cf.col;
+        ctx.shadowBlur = 14;
+        if(cf.kind==="heart") drawHeart(0,0,cf.s,cf.col,al);
+        else drawStar(0,0,cf.s*0.65,cf.col,al);
+        ctx.restore();
+      }
+      // burst at scene start
+      if(local < 0.18 && confetti.length < 60) burstConfetti();
+    }
+
+    if(si===2){
+      // fireworks spawn + draw
+      if(Math.random() < 0.12) spawnFirework();
+      for(const fw of fireworks){
+        for(const pt of fw.parts){
+          const al = clamp01(pt.life/1.8);
+          ctx.save();
+          ctx.globalAlpha = al;
+          ctx.shadowColor = fw.col;
+          ctx.shadowBlur = 26;
+          drawStar(pt.x, pt.y, 12, fw.col, al);
+          ctx.restore();
+        }
+      }
+    }
+
+    if(si===3){
+      const cardA = clamp01(local/1.2);
+      drawWishCard(cardA);
+
+      // subtle bokeh circles
+      ctx.save();
+      ctx.globalAlpha = 0.12;
+      ctx.fillStyle = "rgba(255,255,255,.9)";
+      ctx.filter = "blur(2px)";
+      for(let i=0;i<18;i++){
+        const x = (i*217 + (t*60|0))%W;
+        const y = H*0.18 + ((i*143)%(H*0.55));
+        ctx.beginPath();
+        ctx.arc(x,y, 8 + (i%6)*3, 0, Math.PI*2);
+        ctx.fill();
+      }
+      ctx.filter = "none";
+      ctx.restore();
+    }
+
+    ctx.restore(); // camera transform
+
+    // ===== Bloom pass (bright-only) =====
+    bloomBegin();
+    // draw bright elements into fxCtx (scaled)
+    // we draw a few glows: sun, fairy lights, fireworks, text sparkle area
+    fxCtx.save();
+    fxCtx.globalAlpha = 0.9;
+
+    // Sun glow (approx)
+    const sx = W*0.16 + Math.sin(t*0.06)*W*0.06;
+    const sy = H*0.14 + Math.cos(t*0.05)*H*0.03;
+    fxCtx.fillStyle = "rgba(255,226,154,.95)";
+    fxCtx.beginPath(); fxCtx.arc(sx,sy,52,0,Math.PI*2); fxCtx.fill();
+
+    // Fairy lights near girl
+    if(si===0 || si===1){
+      for(let i=0;i<10;i++){
+        const x = W*0.18 + i*38;
+        const y = H*0.56 + Math.sin(t*1.4 + i)*10;
+        fxCtx.fillStyle = i%3===0 ? "rgba(255,121,201,.95)" : (i%3===1 ? "rgba(134,215,255,.95)" : "rgba(255,226,154,.95)");
+        fxCtx.beginPath(); fxCtx.arc(x,y,6,0,Math.PI*2); fxCtx.fill();
+      }
+    }
+
+    // Fireworks bloom
+    if(si===2){
+      for(const fw of fireworks){
+        fxCtx.fillStyle = fw.col;
+        for(const pt of fw.parts){
+          if(pt.life > 0.6){
+            fxCtx.beginPath();
+            fxCtx.arc(pt.x, pt.y, 6, 0, Math.PI*2);
+            fxCtx.fill();
+          }
+        }
+      }
+    }
+
+    fxCtx.restore();
+    bloomEnd();
+
+    // Cinematic vignette + grain
+    vignette(0.34);
+    drawFilmGrain();
+
+    // Fade overlay between scenes
+    ctx.save();
+    ctx.globalAlpha = (1 - a) * 0.45;
+    ctx.fillStyle = "rgba(0,0,0,1)";
+    ctx.fillRect(0,0,W,H);
+    ctx.restore();
+  }
+
+  // ============================
+  // Controls
+  // ============================
+  document.getElementById("start").addEventListener("click", ()=>{ started = true; });
+  document.getElementById("replay").addEventListener("click", ()=>{
+    started = true; t = 0; fireworks = []; burstConfetti();
+  });
+  document.getElementById("speed").addEventListener("click", (e)=>{
+    sIndex = (sIndex+1)%speedPresets.length;
+    speed = speedPresets[sIndex];
+    e.target.textContent = `Speed: ${speed.toFixed(2)}×`;
+  });
+  document.getElementById("quality").addEventListener("click", (e)=>{
+    qIndex = (qIndex+1)%qualityPresets.length;
+    quality = qualityPresets[qIndex];
+    e.target.textContent = `Quality: ${quality.name}`;
+    buildOffscreens();
+    rebuildEntities();
+  });
+
+  // init
+  resize();
+  rebuildEntities();
+  burstConfetti();
+
+  // ============================
+  // Main loop
+  // ============================
+  function loop(now){
+    const raw = Math.min(0.033, (now-last)/1000);
+    last = now;
+    dt = raw;
+
+    // advance time (even if not started -> small idle motion)
+    t += (started ? raw*speed : raw*0.25);
+
+    fpsTick(raw);
+
+    // update
+    updateWorld();
+
+    // scene
+    const s = sceneAt(t);
+    renderScene(s.i, s.local);
+
+    requestAnimationFrame(loop);
+  }
+  requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>
