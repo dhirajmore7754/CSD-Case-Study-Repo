@@ -1,0 +1,915 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Happy Birthday Muskan 🎀</title>
+  <style>
+    :root{
+      --glass: rgba(255,255,255,.10);
+      --glass2: rgba(255,255,255,.16);
+      --txt: rgba(255,255,255,.95);
+      --muted: rgba(255,255,255,.72);
+    }
+    html,body{height:100%; margin:0; background:#070611; font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;}
+    #app{position:fixed; inset:0; overflow:hidden;}
+    canvas{position:absolute; inset:0; width:100%; height:100%; display:block;}
+
+    .hud{position:absolute; inset:0; padding:16px; display:flex; flex-direction:column; justify-content:space-between; pointer-events:none;}
+    .topbar{display:flex; justify-content:space-between; gap:12px; align-items:center;}
+    .pill{
+      pointer-events:auto; display:flex; gap:10px; align-items:center;
+      padding:10px 12px; border-radius:999px;
+      background:linear-gradient(180deg,var(--glass2),var(--glass));
+      border:1px solid rgba(255,255,255,.16);
+      backdrop-filter: blur(10px);
+      box-shadow: 0 10px 28px rgba(0,0,0,.30);
+      color:var(--txt);
+    }
+    .dot{
+      width:10px; height:10px; border-radius:50%;
+      background: radial-gradient(circle at 30% 30%, #fff, #ff79c9);
+      box-shadow: 0 0 20px rgba(255,121,201,.55);
+    }
+    .badge{font-size:12px; color:var(--muted);}
+
+    .controls{pointer-events:auto; display:flex; gap:10px; flex-wrap:wrap;}
+    button{
+      cursor:pointer; border:1px solid rgba(255,255,255,.18);
+      background: linear-gradient(180deg, rgba(255,255,255,.14), rgba(255,255,255,.06));
+      color:var(--txt);
+      padding:10px 14px; border-radius:16px; font-weight:800;
+      backdrop-filter: blur(10px);
+      transition: transform .15s ease, border-color .15s ease;
+    }
+    button:hover{transform: translateY(-1px); border-color: rgba(255,255,255,.32);}
+    button:active{transform: translateY(0) scale(.99);}
+
+    .bottombar{display:flex; justify-content:space-between; gap:12px; align-items:flex-end;}
+    .hint{
+      max-width:min(560px, 92vw);
+      padding:12px 14px; border-radius:18px;
+      background:linear-gradient(180deg, rgba(0,0,0,.35), rgba(0,0,0,.12));
+      border:1px solid rgba(255,255,255,.12);
+      backdrop-filter: blur(8px);
+      color:var(--txt);
+    }
+    .hint .title{font-size:12px; color:var(--muted); margin-bottom:4px;}
+    .hint .line{font-size:14px; line-height:1.35;}
+
+    .sceneLabel{
+      position:absolute; left:16px; bottom:92px;
+      padding:8px 12px; border-radius:999px;
+      background: rgba(0,0,0,.25);
+      border:1px solid rgba(255,255,255,.12);
+      color: rgba(255,255,255,.82);
+      backdrop-filter: blur(8px);
+      font-size:12px;
+      pointer-events:none;
+    }
+
+    .popup{
+      position:absolute; left:50%; top:50%;
+      transform: translate(-50%,-50%) scale(.92);
+      opacity:0;
+      padding:18px 18px 20px;
+      border-radius:26px;
+      text-align:center;
+      background:
+        radial-gradient(900px 420px at 50% 0%, rgba(255,121,201,.28), transparent 60%),
+        radial-gradient(800px 420px at 50% 100%, rgba(134,215,255,.22), transparent 65%),
+        linear-gradient(180deg, rgba(255,255,255,.16), rgba(255,255,255,.08));
+      border:2px solid rgba(255,255,255,.22);
+      backdrop-filter: blur(12px);
+      box-shadow: 0 25px 90px rgba(0,0,0,.60);
+      pointer-events:none;
+      min-width:min(620px, 92vw);
+      color:var(--txt);
+    }
+    .popup:after{
+      content:"";
+      position:absolute; left:50%; bottom:-16px;
+      width:34px; height:34px;
+      transform: translateX(-50%) rotate(45deg);
+      background: linear-gradient(180deg, rgba(255,255,255,.12), rgba(255,255,255,.06));
+      border-right:2px solid rgba(255,255,255,.18);
+      border-bottom:2px solid rgba(255,255,255,.18);
+      filter: drop-shadow(0 10px 16px rgba(0,0,0,.25));
+    }
+    .popup h1{margin:0; font-size: clamp(26px, 4.4vw, 46px); text-shadow: 0 0 30px rgba(255,121,201,.28), 0 0 40px rgba(134,215,255,.18);}
+    .popup p{margin:8px 0 0; color:rgba(255,255,255,.78); font-size: clamp(13px, 2.4vw, 16px); line-height:1.35;}
+    .shine{
+      background: linear-gradient(90deg, #ffe29a, #fff, #ff79c9);
+      -webkit-background-clip:text; background-clip:text; color:transparent;
+      filter: drop-shadow(0 0 16px rgba(255,226,154,.22));
+    }
+    .popup.show{opacity:1; transform: translate(-50%,-50%) scale(1); transition: opacity .55s ease, transform .55s cubic-bezier(.18,.9,.26,1.2);}
+    .popup.hide{opacity:0; transform: translate(-50%,-50%) scale(.96); transition: opacity .45s ease, transform .45s ease;}
+
+    .sticker{
+      position:absolute; right:18px; bottom:98px;
+      font-size:22px; opacity:.95;
+      filter: drop-shadow(0 10px 16px rgba(0,0,0,.35));
+      animation: bob 2.6s ease-in-out infinite;
+      pointer-events:none;
+    }
+    @keyframes bob{0%,100%{transform: translateY(0) rotate(-6deg);} 50%{transform: translateY(-6px) rotate(6deg);}}
+  </style>
+</head>
+<body>
+<div id="app">
+  <canvas id="vfx"></canvas>
+
+  <div class="hud">
+    <div class="topbar">
+      <div class="pill">
+        <span class="dot"></span>
+        <div>
+          <div style="font-weight:900; line-height:1.05;">Kawaii Anime Birthday VFX</div>
+          <div class="badge" id="status">Click “Start”</div>
+        </div>
+      </div>
+      <div class="controls">
+        <button id="startBtn">Start</button>
+        <button id="nextBtn">Next Scene</button>
+        <button id="replayBtn">Replay</button>
+      </div>
+    </div>
+
+    <div class="bottombar">
+      <div class="hint">
+        <div class="title">Scene info</div>
+        <div class="line" id="hintLine">Scene 1: Sakura garden + chibi girl + petals + popup.</div>
+      </div>
+      <div class="pill">
+        <div style="font-size:12px; color:rgba(255,255,255,.6)">Name:</div>
+        <div style="font-weight:900" id="nameTag">Muskan</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="popup" id="popup">
+    <h1>Happy Birthday <span class="shine" id="nameBig">Muskan</span> 🎀✨</h1>
+    <p>May your year be full of cute moments, sweet surprises, and anime-level happiness 🌸</p>
+  </div>
+
+  <div class="sceneLabel" id="sceneLabel">Scene 1 / Sakura Garden</div>
+  <div class="sticker" id="cornerSticker">🌸</div>
+</div>
+
+<script>
+(() => {
+  // ============================
+  // Customize name here
+  // ============================
+  const BIRTHDAY_NAME = "Muskan";
+
+  // UI
+  const canvas = document.getElementById("vfx");
+  const ctx = canvas.getContext("2d");
+  const status = document.getElementById("status");
+  const hintLine = document.getElementById("hintLine");
+  const sceneLabel = document.getElementById("sceneLabel");
+  const cornerSticker = document.getElementById("cornerSticker");
+  const popup = document.getElementById("popup");
+  document.getElementById("nameTag").textContent = BIRTHDAY_NAME;
+  document.getElementById("nameBig").textContent = BIRTHDAY_NAME;
+
+  // HiDPI
+  let W=innerWidth, H=innerHeight, dpr=Math.min(devicePixelRatio||1, 2);
+  function resize(){
+    W=innerWidth; H=innerHeight; dpr=Math.min(devicePixelRatio||1, 2);
+    canvas.width = Math.floor(W*dpr);
+    canvas.height = Math.floor(H*dpr);
+    canvas.style.width = W+"px";
+    canvas.style.height = H+"px";
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+  }
+  addEventListener("resize", resize);
+  resize();
+
+  // Helpers
+  const clamp01 = x => Math.max(0, Math.min(1,x));
+  const lerp = (a,b,t)=>a+(b-a)*t;
+  const rand = (a,b)=>a+Math.random()*(b-a);
+
+  function roundRect(x,y,w,h,r){
+    const rr = Math.min(r, w/2, h/2);
+    ctx.beginPath();
+    ctx.moveTo(x+rr,y);
+    ctx.arcTo(x+w,y,x+w,y+h,rr);
+    ctx.arcTo(x+w,y+h,x,y+h,rr);
+    ctx.arcTo(x,y+h,x,y,rr);
+    ctx.arcTo(x,y,x+w,y,rr);
+    ctx.closePath();
+  }
+
+  // Scenes
+  const scenes = [
+    {label:"Scene 1 / Sakura Garden", hint:"Chibi girl + sakura petals + sparkles + popup.", sticker:"🌸"},
+    {label:"Scene 2 / Kawaii Gift", hint:"Gift pops open + heart confetti burst 💖", sticker:"🎁"},
+    {label:"Scene 3 / Star Fireworks", hint:"Anime-style star fireworks + glow ✨", sticker:"⭐"},
+    {label:"Scene 4 / Wish Card", hint:"Big wish card + floating stickers 🎀", sticker:"🎀"},
+  ];
+  let sceneIndex = 0;
+  let started = false;
+  let sceneT = 0;         // seconds within current scene
+  let globalT = 0;        // seconds overall
+  let autoRunning = false;
+
+  function setSceneUI(){
+    const s = scenes[sceneIndex];
+    sceneLabel.textContent = s.label;
+    hintLine.textContent = s.hint;
+    cornerSticker.textContent = s.sticker;
+  }
+  setSceneUI();
+
+  function showPopup(){ popup.classList.remove("hide"); popup.classList.add("show"); }
+  function hidePopup(){ popup.classList.remove("show"); popup.classList.add("hide"); }
+
+  // Particles
+  const petals = Array.from({length: 900}, () => ({
+    x: rand(-200, W+200),
+    y: rand(-H, H),
+    vx: rand(-12, 12),
+    vy: rand(18, 42),
+    r: rand(0, Math.PI*2),
+    vr: rand(-1.6, 1.6),
+    s: rand(4, 9),
+    a: rand(0.18, 0.45),
+  }));
+
+  const sparkles = Array.from({length: 26}, () => ({
+    x: rand(W*0.25, W*0.75),
+    y: rand(H*0.18, H*0.65),
+    ph: rand(0, Math.PI*2),
+    s: rand(6, 14),
+  }));
+
+  const clouds = Array.from({length: 7}, () => ({
+    x: rand(-200, W+200),
+    y: rand(H*0.08, H*0.28),
+    s: rand(0.9, 1.7),
+    v: rand(8, 18)
+  }));
+
+  // Confetti (scene 2)
+  let confetti = [];
+  function burstConfetti(){
+    confetti = Array.from({length: 420}, () => ({
+      x: W*0.62 + rand(-40,40),
+      y: H*0.58 + rand(-40,40),
+      vx: rand(-220,220),
+      vy: rand(-480,-140),
+      g: rand(520, 820),
+      r: rand(0, Math.PI*2),
+      vr: rand(-8,8),
+      s: rand(6, 14),
+      life: rand(1.6, 2.4),
+      kind: Math.random()<0.7 ? "heart" : "star",
+      col: ["#ff79c9","#86d7ff","#ffe29a","#8bffc8","#ffffff"][(Math.random()*5)|0]
+    }));
+  }
+
+  // Fireworks (scene 3)
+  let fireworks = [];
+  function spawnFirework(){
+    const x = rand(W*0.25, W*0.75);
+    const y = rand(H*0.18, H*0.45);
+    const col = ["#ff79c9","#86d7ff","#ffe29a","#8bffc8","#ffffff"][(Math.random()*5)|0];
+    const parts = Array.from({length: 120}, () => {
+      const a = rand(0, Math.PI*2);
+      const sp = rand(80, 260);
+      return {x, y, vx: Math.cos(a)*sp, vy: Math.sin(a)*sp, life: rand(1.1, 1.7)};
+    });
+    fireworks.push({col, parts});
+  }
+
+  // Stickers around card (scene 4)
+  const cardStickers = Array.from({length: 14}, () => ({
+    x: rand(W*0.18, W*0.82),
+    y: rand(H*0.20, H*0.70),
+    s: rand(16, 32),
+    ph: rand(0, Math.PI*2),
+    emoji: ["💖","🌟","🧁","🎀","🌷","✨","🍓","🫶"][(Math.random()*8)|0]
+  }));
+
+  // ============================
+  // Drawing helpers (anime-ish glow)
+  // ============================
+  function vignette(){
+    const g = ctx.createRadialGradient(W/2, H/2, Math.min(W,H)*0.2, W/2, H/2, Math.max(W,H)*0.7);
+    g.addColorStop(0, "rgba(0,0,0,0)");
+    g.addColorStop(1, "rgba(0,0,0,0.35)");
+    ctx.fillStyle = g;
+    ctx.fillRect(0,0,W,H);
+  }
+
+  function drawSky(){
+    const g = ctx.createLinearGradient(0,0,0,H);
+    g.addColorStop(0, "#86d7ff");
+    g.addColorStop(0.45, "#b7a7ff");
+    g.addColorStop(1, "#070611");
+    ctx.fillStyle = g;
+    ctx.fillRect(0,0,W,H);
+  }
+
+  function drawHills(){
+    ctx.save();
+    ctx.globalAlpha = 0.85;
+    // back hill
+    ctx.fillStyle = "rgba(8,10,20,.55)";
+    ctx.beginPath();
+    ctx.moveTo(0, H*0.62);
+    ctx.quadraticCurveTo(W*0.25, H*0.55, W*0.5, H*0.62);
+    ctx.quadraticCurveTo(W*0.75, H*0.70, W, H*0.62);
+    ctx.lineTo(W,H); ctx.lineTo(0,H); ctx.closePath();
+    ctx.fill();
+
+    // front hill
+    ctx.fillStyle = "rgba(0,0,0,.20)";
+    ctx.beginPath();
+    ctx.moveTo(0, H*0.70);
+    ctx.quadraticCurveTo(W*0.35, H*0.63, W*0.62, H*0.72);
+    ctx.quadraticCurveTo(W*0.82, H*0.80, W, H*0.74);
+    ctx.lineTo(W,H); ctx.lineTo(0,H); ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+  }
+
+  function drawGround(){
+    const g = ctx.createLinearGradient(0,H*0.62,0,H);
+    g.addColorStop(0, "rgba(139,255,200,.85)");
+    g.addColorStop(1, "rgba(40,130,90,.65)");
+    ctx.fillStyle = g;
+    ctx.fillRect(0, H*0.62, W, H*0.38);
+
+    // cute sparkly grass dots
+    ctx.globalAlpha = 0.10;
+    ctx.fillStyle = "#ffffff";
+    for(let i=0;i<1200;i++){
+      const x = (i*37)%W;
+      const y = H*0.62 + ((i*91)%(H*0.38));
+      ctx.fillRect(x, y, 1, 1);
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  function drawCloud(c){
+    ctx.save();
+    ctx.translate(c.x, c.y);
+    ctx.scale(c.s, c.s);
+    ctx.globalAlpha = 0.92;
+    ctx.filter = "blur(0.6px)";
+    ctx.fillStyle = "rgba(255,255,255,.95)";
+    ctx.beginPath();
+    ctx.ellipse(0, 0, 70, 45, 0, 0, Math.PI*2);
+    ctx.ellipse(60, -15, 60, 40, 0, 0, Math.PI*2);
+    ctx.ellipse(-60, -10, 55, 38, 0, 0, Math.PI*2);
+    ctx.fill();
+    ctx.filter = "none";
+    ctx.restore();
+  }
+
+  function drawSakuraTree(x,y,scale=1){
+    ctx.save();
+    ctx.translate(x,y);
+    ctx.scale(scale, scale);
+
+    // trunk
+    ctx.lineWidth = 10;
+    ctx.lineCap = "round";
+    ctx.strokeStyle = "rgba(60,35,45,.95)";
+    ctx.beginPath();
+    ctx.moveTo(0, 120);
+    ctx.quadraticCurveTo(-10, 70, -6, 30);
+    ctx.stroke();
+
+    // canopy (pink blobs)
+    const blobs = [
+      {x:-60,y:20,r:55},{x:0,y:0,r:62},{x:60,y:18,r:52},
+      {x:-25,y:-35,r:45},{x:30,y:-40,r:44}
+    ];
+    // glow layer
+    ctx.globalAlpha = 0.35;
+    ctx.fillStyle = "#ff79c9";
+    ctx.filter = "blur(10px)";
+    blobs.forEach(b=>{
+      ctx.beginPath();
+      ctx.arc(b.x,b.y,b.r,0,Math.PI*2);
+      ctx.fill();
+    });
+    ctx.filter = "none";
+    ctx.globalAlpha = 1;
+
+    // main
+    ctx.fillStyle = "#ffa6dd";
+    blobs.forEach(b=>{
+      ctx.beginPath();
+      ctx.arc(b.x,b.y,b.r,0,Math.PI*2);
+      ctx.fill();
+    });
+
+    // outline
+    ctx.lineWidth = 5;
+    ctx.strokeStyle = "rgba(42,23,48,.8)";
+    blobs.forEach(b=>{
+      ctx.beginPath();
+      ctx.arc(b.x,b.y,b.r,0,Math.PI*2);
+      ctx.stroke();
+    });
+
+    ctx.restore();
+  }
+
+  function drawChair(x,y){
+    ctx.save();
+    ctx.translate(x,y);
+    // chair body
+    ctx.fillStyle = "#b7a7ff";
+    ctx.strokeStyle = "rgba(42,23,48,.85)";
+    ctx.lineWidth = 5;
+
+    // seat
+    roundRect(-70, 10, 140, 26, 12);
+    ctx.fill(); ctx.stroke();
+
+    // back
+    roundRect(-70, -95, 140, 110, 16);
+    ctx.fill(); ctx.stroke();
+
+    // legs
+    ctx.lineWidth = 6;
+    ctx.beginPath();
+    ctx.moveTo(-55, 36); ctx.lineTo(-55, 92);
+    ctx.moveTo(55, 36);  ctx.lineTo(55, 92);
+    ctx.moveTo(-55, 36); ctx.lineTo(-65, 92);
+    ctx.moveTo(55, 36);  ctx.lineTo(65, 92);
+    ctx.stroke();
+
+    ctx.restore();
+  }
+
+  function drawChibiGirl(x,y,breath){
+    ctx.save();
+    ctx.translate(x, y + breath);
+
+    // body
+    ctx.lineWidth = 5;
+    ctx.strokeStyle = "rgba(42,23,48,.85)";
+
+    // head (big)
+    // glow
+    ctx.globalAlpha = 0.25;
+    ctx.fillStyle = "#ff79c9";
+    ctx.filter = "blur(14px)";
+    ctx.beginPath(); ctx.arc(0, -110, 62, 0, Math.PI*2); ctx.fill();
+    ctx.filter = "none"; ctx.globalAlpha = 1;
+
+    ctx.fillStyle = "#ffd7cf";
+    ctx.beginPath(); ctx.arc(0, -110, 58, 0, Math.PI*2); ctx.fill();
+    ctx.stroke();
+
+    // hair cap
+    ctx.fillStyle = "#2a1b2e";
+    ctx.beginPath();
+    ctx.arc(0, -122, 60, Math.PI*0.05, Math.PI*0.95, true);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+
+    // bangs
+    ctx.fillStyle = "#2a1b2e";
+    ctx.beginPath();
+    ctx.ellipse(-18, -114, 20, 16, 0.25, 0, Math.PI*2);
+    ctx.ellipse( 18, -114, 20, 16,-0.25, 0, Math.PI*2);
+    ctx.fill();
+
+    // eyes
+    ctx.fillStyle = "#101018";
+    ctx.beginPath(); ctx.arc(-20, -110, 6.5, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc( 20, -110, 6.5, 0, Math.PI*2); ctx.fill();
+    // eye shine
+    ctx.fillStyle = "rgba(255,255,255,.9)";
+    ctx.beginPath(); ctx.arc(-17, -113, 2.2, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc( 23, -113, 2.2, 0, Math.PI*2); ctx.fill();
+
+    // blush
+    ctx.fillStyle = "rgba(255,121,201,.35)";
+    ctx.beginPath(); ctx.arc(-38, -92, 10, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc( 38, -92, 10, 0, Math.PI*2); ctx.fill();
+
+    // torso dress
+    ctx.fillStyle = "#86d7ff";
+    roundRect(-35, -60, 70, 70, 20);
+    ctx.fill(); ctx.stroke();
+    // skirt
+    ctx.beginPath();
+    ctx.moveTo(-45, 10); ctx.lineTo(45, 10); ctx.lineTo(0, 55); ctx.closePath();
+    ctx.fill(); ctx.stroke();
+
+    // arms (cute)
+    ctx.lineWidth = 8;
+    ctx.strokeStyle = "rgba(255,215,207,.95)";
+    ctx.beginPath();
+    ctx.moveTo(-32, -30); ctx.quadraticCurveTo(-70, -10, -55, 15);
+    ctx.moveTo( 32, -30); ctx.quadraticCurveTo( 70, -10,  55, 15);
+    ctx.stroke();
+
+    // legs (sitting)
+    ctx.lineWidth = 10;
+    ctx.strokeStyle = "rgba(255,255,255,.95)";
+    ctx.beginPath();
+    ctx.moveTo(-12, 35); ctx.quadraticCurveTo(-20, 58, -10, 78);
+    ctx.moveTo( 12, 35); ctx.quadraticCurveTo( 20, 58,  10, 78);
+    ctx.stroke();
+
+    // shoes
+    ctx.fillStyle = "#ff79c9";
+    ctx.strokeStyle = "rgba(42,23,48,.85)";
+    ctx.lineWidth = 4;
+    roundRect(-26, 70, 26, 16, 9); ctx.fill(); ctx.stroke();
+    roundRect(0,   70, 26, 16, 9); ctx.fill(); ctx.stroke();
+
+    ctx.restore();
+  }
+
+  function drawCat(x,y,wiggle){
+    ctx.save();
+    ctx.translate(x,y);
+    ctx.rotate(wiggle*0.04);
+
+    // body
+    ctx.fillStyle = "#ffffff";
+    ctx.strokeStyle = "rgba(42,23,48,.85)";
+    ctx.lineWidth = 4;
+    ctx.beginPath(); ctx.arc(0, 0, 24, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+
+    // head
+    ctx.beginPath(); ctx.arc(24, -8, 20, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+
+    // ears
+    ctx.fillStyle = "#ffa6dd";
+    ctx.beginPath();
+    ctx.moveTo(18, -30); ctx.lineTo(28, -18); ctx.lineTo(8, -18); ctx.closePath();
+    ctx.fill(); ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(36, -30); ctx.lineTo(44, -18); ctx.lineTo(26, -18); ctx.closePath();
+    ctx.fill(); ctx.stroke();
+
+    // eyes
+    ctx.fillStyle = "#101018";
+    ctx.beginPath(); ctx.arc(18, -8, 3.3, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(30, -8, 3.3, 0, Math.PI*2); ctx.fill();
+
+    ctx.restore();
+  }
+
+  // Simple heart and star
+  function drawHeart(x,y,size,color,alpha=1){
+    ctx.save();
+    ctx.translate(x,y);
+    ctx.scale(size/20, size/20);
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.moveTo(0, 6);
+    ctx.bezierCurveTo(10, -2, 8, -16, 0, -10);
+    ctx.bezierCurveTo(-8, -16, -10, -2, 0, 6);
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+  }
+
+  function drawStar(x,y,size,color,alpha=1){
+    ctx.save();
+    ctx.translate(x,y);
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    const spikes = 5;
+    const outer = size;
+    const inner = size*0.45;
+    let rot = Math.PI / 2 * 3;
+    let cx = 0, cy = 0;
+    ctx.moveTo(cx, cy - outer);
+    for(let i=0;i<spikes;i++){
+      ctx.lineTo(cx + Math.cos(rot)*outer, cy + Math.sin(rot)*outer);
+      rot += Math.PI/spikes;
+      ctx.lineTo(cx + Math.cos(rot)*inner, cy + Math.sin(rot)*inner);
+      rot += Math.PI/spikes;
+    }
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+  }
+
+  function drawGift(x,y,open01){
+    ctx.save();
+    ctx.translate(x,y);
+
+    // box shadow glow
+    ctx.globalAlpha = 0.25;
+    ctx.fillStyle = "#ff79c9";
+    ctx.filter = "blur(16px)";
+    roundRect(-70, -20, 140, 110, 18); ctx.fill();
+    ctx.filter = "none";
+    ctx.globalAlpha = 1;
+
+    // base
+    ctx.fillStyle = "#ff79c9";
+    ctx.strokeStyle = "rgba(42,23,48,.85)";
+    ctx.lineWidth = 5;
+    roundRect(-70, -20, 140, 110, 18); ctx.fill(); ctx.stroke();
+
+    // ribbon
+    ctx.fillStyle = "#ffe29a";
+    roundRect(-10, -20, 20, 110, 10); ctx.fill(); ctx.stroke();
+    roundRect(-70, 22, 140, 18, 10); ctx.fill(); ctx.stroke();
+
+    // lid (rotates up)
+    const lidRot = -1.15 * open01;
+    ctx.save();
+    ctx.translate(0, -28);
+    ctx.rotate(lidRot);
+    ctx.translate(0, -10);
+    ctx.fillStyle = "#ff79c9";
+    roundRect(-75, -20, 150, 38, 16); ctx.fill(); ctx.stroke();
+    // lid ribbon
+    ctx.fillStyle = "#ffe29a";
+    roundRect(-10, -20, 20, 38, 10); ctx.fill(); ctx.stroke();
+    ctx.restore();
+
+    // bow (cute)
+    const bowY = -45 - open01*10;
+    drawHeart(-18, bowY, 18, "#ffe29a", 1);
+    drawHeart( 18, bowY, 18, "#ffe29a", 1);
+
+    ctx.restore();
+  }
+
+  function drawWishCard(alpha){
+    const cx = W/2, cy = H*0.42;
+    const w = Math.min(W*0.78, 760);
+    const h = Math.min(H*0.38, 280);
+
+    ctx.save();
+    ctx.globalAlpha = alpha;
+
+    // glow
+    ctx.globalAlpha = alpha*0.35;
+    ctx.fillStyle = "#ff79c9";
+    ctx.filter = "blur(22px)";
+    roundRect(cx-w/2, cy-h/2, w, h, 26); ctx.fill();
+    ctx.filter = "none";
+    ctx.globalAlpha = alpha;
+
+    // card
+    ctx.fillStyle = "rgba(255,255,255,0.92)";
+    ctx.strokeStyle = "rgba(42,23,48,.85)";
+    ctx.lineWidth = 6;
+    roundRect(cx-w/2, cy-h/2, w, h, 26);
+    ctx.fill(); ctx.stroke();
+
+    // border
+    ctx.strokeStyle = "rgba(255,121,201,.85)";
+    ctx.lineWidth = 6;
+    roundRect(cx-w/2+10, cy-h/2+10, w-20, h-20, 22);
+    ctx.stroke();
+
+    // text
+    ctx.fillStyle = "#2a1730";
+    ctx.textAlign = "center";
+    ctx.font = "900 40px system-ui, -apple-system, Segoe UI, Roboto, Arial";
+    ctx.fillText(`Happy Birthday ${BIRTHDAY_NAME}!`, cx, cy-40);
+    ctx.font = "700 22px system-ui, -apple-system, Segoe UI, Roboto, Arial";
+    ctx.fillStyle = "#5b3a6e";
+    ctx.fillText("Stay cute, stay strong, stay shining ✨", cx, cy+2);
+    ctx.fillStyle = "#6a5aa8";
+    ctx.fillText("Wishing you the sweetest year ever 🎀", cx, cy+38);
+
+    ctx.restore();
+  }
+
+  // ============================
+  // Scene control
+  // ============================
+  async function gotoScene(i){
+    sceneIndex = i;
+    sceneT = 0;
+    setSceneUI();
+
+    if(i === 0){
+      status.textContent = "Sakura garden running…";
+      hidePopup();
+    } else if(i === 1){
+      status.textContent = "Gift scene running…";
+      hidePopup();
+      burstConfetti();
+    } else if(i === 2){
+      status.textContent = "Fireworks finale…";
+      showPopup();
+    } else if(i === 3){
+      status.textContent = "Wish card scene…";
+      hidePopup();
+    }
+  }
+
+  async function autoPlay(){
+    if(autoRunning) return;
+    autoRunning = true;
+
+    await gotoScene(0);
+    showPopup();
+    await wait(2300);
+    hidePopup();
+    await wait(800);
+
+    await gotoScene(1);
+    await wait(2800);
+
+    await gotoScene(2);
+    await wait(6200);
+
+    await gotoScene(3);
+    await wait(6200);
+
+    autoRunning = false;
+    status.textContent = "Done 🎉 Click Replay or Next Scene.";
+  }
+
+  function wait(ms){ return new Promise(r=>setTimeout(r, ms)); }
+
+  document.getElementById("startBtn").addEventListener("click", () => {
+    started = true;
+    autoPlay();
+  });
+  document.getElementById("nextBtn").addEventListener("click", () => {
+    started = true;
+    gotoScene((sceneIndex + 1) % 4);
+  });
+  document.getElementById("replayBtn").addEventListener("click", () => {
+    started = true;
+    fireworks = [];
+    burstConfetti();
+    autoPlay();
+  });
+
+  // ============================
+  // Main animation
+  // ============================
+  let last = performance.now();
+  function frame(now){
+    const dt = Math.min(0.033, (now-last)/1000);
+    last = now;
+    globalT += dt;
+    if(started) sceneT += dt;
+
+    // clear
+    ctx.clearRect(0,0,W,H);
+
+    // background
+    drawSky();
+
+    // clouds
+    clouds.forEach(c=>{
+      c.x += c.v*dt;
+      if(c.x > W+220) c.x = -220;
+      drawCloud(c);
+    });
+
+    drawHills();
+    drawGround();
+
+    // some sakura trees in background
+    const baseY = H*0.62;
+    drawSakuraTree(W*0.16, baseY-40, 0.9);
+    drawSakuraTree(W*0.86, baseY-30, 1.05);
+
+    // petals always (sakura vibe)
+    petals.forEach(p=>{
+      p.x += (p.vx + Math.sin(globalT*0.7 + p.y*0.01)*10)*dt;
+      p.y += p.vy*dt;
+      p.r += p.vr*dt;
+      if(p.y > H+30){ p.y = -rand(20, H*0.6); p.x = rand(-100, W+100); }
+
+      ctx.save();
+      ctx.translate(p.x, p.y);
+      ctx.rotate(p.r);
+      // glow
+      ctx.globalAlpha = p.a*0.45;
+      ctx.fillStyle = "#ff79c9";
+      ctx.filter = "blur(6px)";
+      drawHeart(0,0,p.s*1.1,"#ff79c9", p.a*0.35);
+      ctx.filter = "none";
+      // main
+      drawHeart(0,0,p.s,"#ffa6dd", p.a);
+      ctx.restore();
+    });
+
+    // sparkles (scene 1 mainly, but subtle always)
+    const sparkleBoost = sceneIndex===0 ? 1 : 0.45;
+    sparkles.forEach(s=>{
+      const tw = 0.35 + 0.65*(0.5+0.5*Math.sin(globalT*3.2 + s.ph));
+      ctx.save();
+      ctx.globalAlpha = tw * 0.7 * sparkleBoost;
+      ctx.fillStyle = "rgba(255,255,255,.95)";
+      ctx.shadowColor = "rgba(255,226,154,.55)";
+      ctx.shadowBlur = 18;
+      drawStar(s.x + Math.sin(globalT*0.6+s.ph)*14, s.y + Math.cos(globalT*0.7+s.ph)*12, s.s*0.55, "#ffffff", tw);
+      ctx.restore();
+    });
+
+    // foreground: chair + chibi + cat (scene 1/2 focus)
+    const chairX = W*0.32, chairY = H*0.62 + 55;
+    drawChair(chairX, chairY);
+    const breath = Math.sin(globalT*2.0)*3.5;
+    drawChibiGirl(chairX, chairY, breath);
+    drawCat(W*0.46, H*0.62 + 80, Math.sin(globalT*2.6));
+
+    // Scene-specific objects
+    if(sceneIndex === 1){
+      // gift + lid open anim + confetti
+      const open01 = clamp01((sceneT-0.25)/0.9);
+      drawGift(W*0.62, H*0.62 + 55, open01);
+
+      // confetti update
+      confetti.forEach(c=>{
+        c.life -= dt;
+        c.vy += c.g*dt;
+        c.x += c.vx*dt;
+        c.y += c.vy*dt;
+        c.r += c.vr*dt;
+
+        const a = clamp01(c.life/2.2);
+        ctx.save();
+        ctx.translate(c.x,c.y);
+        ctx.rotate(c.r);
+        ctx.globalAlpha = a;
+        ctx.shadowColor = c.col;
+        ctx.shadowBlur = 12;
+        if(c.kind==="heart") drawHeart(0,0,c.s,c.col,a);
+        else drawStar(0,0,c.s*0.65,c.col,a);
+        ctx.restore();
+      });
+      confetti = confetti.filter(c => c.life > 0 && c.y < H+120);
+    }
+
+    if(sceneIndex === 2){
+      // fireworks spawn
+      if(Math.random() < 0.07) spawnFirework();
+
+      // draw fireworks
+      fireworks.forEach(fw=>{
+        fw.parts.forEach(pt=>{
+          pt.life -= dt;
+          pt.vx *= (1 - 0.75*dt);
+          pt.vy *= (1 - 0.75*dt);
+          pt.vy += 120*dt; // gravity down
+          pt.x += pt.vx*dt;
+          pt.y += pt.vy*dt;
+
+          const a = clamp01(pt.life/1.6);
+          ctx.save();
+          ctx.globalAlpha = a;
+          ctx.shadowColor = fw.col;
+          ctx.shadowBlur = 22;
+          drawStar(pt.x, pt.y, 10, fw.col, a);
+          ctx.restore();
+        });
+      });
+      fireworks = fireworks
+        .map(fw => ({...fw, parts: fw.parts.filter(p=>p.life>0)}))
+        .filter(fw=>fw.parts.length>0);
+    }
+
+    if(sceneIndex === 3){
+      // wish card + floating stickers
+      const a = clamp01(sceneT/1.0);
+      drawWishCard(a);
+
+      cardStickers.forEach(st=>{
+        const bob = Math.sin(globalT*1.6 + st.ph)*8;
+        ctx.save();
+        ctx.globalAlpha = 0.55 + 0.35*(0.5+0.5*Math.sin(globalT*2.2 + st.ph));
+        ctx.font = `900 ${st.s}px system-ui, -apple-system, Segoe UI, Roboto, Arial`;
+        ctx.shadowColor = "rgba(255,121,201,.55)";
+        ctx.shadowBlur = 16;
+        ctx.fillText(st.emoji, st.x + Math.cos(globalT*0.9 + st.ph)*6, st.y + bob);
+        ctx.restore();
+      });
+    }
+
+    vignette();
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+
+  // start scene
+  gotoScene(0);
+
+})();
+</script>
+</body>
+</html>
