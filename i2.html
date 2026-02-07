@@ -1,0 +1,604 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Birthday VFX Video</title>
+  <style>
+    :root{
+      --glass: rgba(255,255,255,.10);
+      --glass2: rgba(255,255,255,.18);
+      --txt: rgba(255,255,255,.95);
+      --muted: rgba(255,255,255,.70);
+    }
+    html,body{height:100%; margin:0; background:#070611; font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;}
+    #app{position:fixed; inset:0; overflow:hidden;}
+    canvas{position:absolute; inset:0; width:100%; height:100%; display:block;}
+
+    .hud{position:absolute; inset:0; padding:16px; display:flex; flex-direction:column; justify-content:space-between; pointer-events:none;}
+    .topbar{display:flex; justify-content:space-between; gap:12px; align-items:center;}
+    .pill{
+      pointer-events:auto; display:flex; gap:10px; align-items:center;
+      padding:10px 12px; border-radius:999px;
+      background:linear-gradient(180deg,var(--glass2),var(--glass));
+      border:1px solid rgba(255,255,255,.16);
+      backdrop-filter: blur(10px);
+      box-shadow: 0 10px 28px rgba(0,0,0,.30);
+      color:var(--txt);
+    }
+    .dot{width:10px;height:10px;border-radius:50%;
+      background: radial-gradient(circle at 30% 30%, #fff, #ff79c9);
+      box-shadow: 0 0 20px rgba(255,121,201,.55);
+    }
+    .badge{font-size:12px; color:var(--muted);}
+    .controls{pointer-events:auto; display:flex; gap:10px; flex-wrap:wrap;}
+    button{
+      cursor:pointer; border:1px solid rgba(255,255,255,.18);
+      background: linear-gradient(180deg, rgba(255,255,255,.14), rgba(255,255,255,.06));
+      color:var(--txt);
+      padding:10px 14px; border-radius:16px; font-weight:800;
+      backdrop-filter: blur(10px);
+      transition: transform .15s ease, border-color .15s ease;
+    }
+    button:hover{transform: translateY(-1px); border-color: rgba(255,255,255,.32);}
+    button:active{transform: translateY(0) scale(.99);}
+
+    .bottombar{display:flex; justify-content:space-between; gap:12px; align-items:flex-end;}
+    .hint{
+      max-width:min(640px, 92vw);
+      padding:12px 14px; border-radius:18px;
+      background:linear-gradient(180deg, rgba(0,0,0,.35), rgba(0,0,0,.12));
+      border:1px solid rgba(255,255,255,.12);
+      backdrop-filter: blur(8px);
+      color:var(--txt);
+    }
+    .hint .title{font-size:12px; color:var(--muted); margin-bottom:4px;}
+    .hint .line{font-size:14px; line-height:1.35;}
+
+    .sceneLabel{
+      position:absolute; left:16px; bottom:92px;
+      padding:8px 12px; border-radius:999px;
+      background: rgba(0,0,0,.25);
+      border:1px solid rgba(255,255,255,.12);
+      color: rgba(255,255,255,.82);
+      backdrop-filter: blur(8px);
+      font-size:12px; pointer-events:none;
+    }
+    .sticker{
+      position:absolute; right:18px; bottom:98px;
+      font-size:22px; opacity:.95;
+      filter: drop-shadow(0 10px 16px rgba(0,0,0,.35));
+      animation: bob 2.6s ease-in-out infinite;
+      pointer-events:none;
+    }
+    @keyframes bob{0%,100%{transform: translateY(0) rotate(-6deg);} 50%{transform: translateY(-6px) rotate(6deg);}}
+
+    .popup{
+      position:absolute; left:50%; top:50%;
+      transform: translate(-50%,-50%) scale(.92);
+      opacity:0;
+      padding:18px 18px 20px;
+      border-radius:26px;
+      text-align:center;
+      background:
+        radial-gradient(900px 420px at 50% 0%, rgba(255,121,201,.30), transparent 60%),
+        radial-gradient(800px 420px at 50% 100%, rgba(134,215,255,.22), transparent 65%),
+        linear-gradient(180deg, rgba(255,255,255,.18), rgba(255,255,255,.08));
+      border:2px solid rgba(255,255,255,.22);
+      backdrop-filter: blur(12px);
+      box-shadow: 0 25px 90px rgba(0,0,0,.60);
+      pointer-events:none;
+      min-width:min(680px, 92vw);
+      color:var(--txt);
+    }
+    .popup:after{
+      content:"";
+      position:absolute; left:50%; bottom:-16px;
+      width:34px; height:34px;
+      transform: translateX(-50%) rotate(45deg);
+      background: linear-gradient(180deg, rgba(255,255,255,.12), rgba(255,255,255,.06));
+      border-right:2px solid rgba(255,255,255,.18);
+      border-bottom:2px solid rgba(255,255,255,.18);
+      filter: drop-shadow(0 10px 16px rgba(0,0,0,.25));
+    }
+    .popup h1{margin:0; font-size: clamp(26px, 4.4vw, 48px); text-shadow: 0 0 30px rgba(255,121,201,.28), 0 0 40px rgba(134,215,255,.18);}
+    .popup p{margin:8px 0 0; color:rgba(255,255,255,.78); font-size: clamp(13px, 2.4vw, 16px); line-height:1.35;}
+    .shine{
+      background: linear-gradient(90deg, #ffe29a, #fff, #ff79c9);
+      -webkit-background-clip:text; background-clip:text; color:transparent;
+      filter: drop-shadow(0 0 16px rgba(255,226,154,.22));
+    }
+    .popup.show{opacity:1; transform: translate(-50%,-50%) scale(1); transition: opacity .55s ease, transform .55s cubic-bezier(.18,.9,.26,1.2);}
+    .popup.hide{opacity:0; transform: translate(-50%,-50%) scale(.96); transition: opacity .45s ease, transform .45s ease;}
+  </style>
+</head>
+<body>
+<div id="app">
+  <canvas id="vfx"></canvas>
+
+  <div class="hud">
+    <div class="topbar">
+      <div class="pill">
+        <span class="dot"></span>
+        <div>
+          <div style="font-weight:900; line-height:1.05;">Birthday VFX (Long + Fast)</div>
+          <div class="badge" id="status">Click “Start”</div>
+        </div>
+      </div>
+      <div class="controls">
+        <button id="startBtn">Start</button>
+        <button id="speedBtn">Speed: 1.25×</button>
+        <button id="replayBtn">Replay</button>
+      </div>
+    </div>
+
+    <div class="bottombar">
+      <div class="hint">
+        <div class="title">Now playing</div>
+        <div class="line" id="hintLine">Garden scene with birds, butterflies, petals, clouds…</div>
+      </div>
+      <div class="pill">
+        <div style="font-size:12px; color:rgba(255,255,255,.6)">Name:</div>
+        <div style="font-weight:900" id="nameTag">Muskan</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="popup" id="popup">
+    <h1>Happy Birthday <span class="shine" id="nameBig">Muskan</span> 🎀✨</h1>
+    <p>May your days be peaceful like nature, and your smile be anime-cute forever 🌸</p>
+  </div>
+
+  <div class="sceneLabel" id="sceneLabel">Scene / Garden</div>
+  <div class="sticker" id="cornerSticker">🌸</div>
+</div>
+
+<script>
+(() => {
+  // ============================
+  // EDIT THESE
+  // ============================
+  const BIRTHDAY_NAME = "Muskan";
+  const SPEED_PRESETS = [1.25, 1.4, 1.6];  // tap Speed button to switch
+  // ============================
+
+  const canvas = document.getElementById("vfx");
+  const ctx = canvas.getContext("2d");
+  const status = document.getElementById("status");
+  const hintLine = document.getElementById("hintLine");
+  const sceneLabel = document.getElementById("sceneLabel");
+  const cornerSticker = document.getElementById("cornerSticker");
+  const popup = document.getElementById("popup");
+
+  document.getElementById("nameTag").textContent = BIRTHDAY_NAME;
+  document.getElementById("nameBig").textContent = BIRTHDAY_NAME;
+
+  // HiDPI
+  let W=innerWidth, H=innerHeight, dpr=Math.min(devicePixelRatio||1, 2);
+  function resize(){
+    W=innerWidth; H=innerHeight; dpr=Math.min(devicePixelRatio||1, 2);
+    canvas.width = Math.floor(W*dpr);
+    canvas.height = Math.floor(H*dpr);
+    canvas.style.width = W+"px";
+    canvas.style.height = H+"px";
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+  }
+  addEventListener("resize", resize);
+  resize();
+
+  // Helpers
+  const clamp01 = x => Math.max(0, Math.min(1,x));
+  const lerp = (a,b,t)=>a+(b-a)*t;
+  const rand = (a,b)=>a+Math.random()*(b-a);
+
+  function roundRect(x,y,w,h,r){
+    const rr = Math.min(r, w/2, h/2);
+    ctx.beginPath();
+    ctx.moveTo(x+rr,y);
+    ctx.arcTo(x+w,y,x+w,y+h,rr);
+    ctx.arcTo(x+w,y+h,x,y+h,rr);
+    ctx.arcTo(x,y+h,x,y,rr);
+    ctx.arcTo(x,y,x+w,y,rr);
+    ctx.closePath();
+  }
+
+  function softGlowCircle(x,y,r,c,blur=20,a=0.35){
+    ctx.save();
+    ctx.globalAlpha = a;
+    ctx.fillStyle = c;
+    ctx.shadowColor = c;
+    ctx.shadowBlur = blur;
+    ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2); ctx.fill();
+    ctx.restore();
+  }
+
+  function vignette(str=0.35){
+    const g = ctx.createRadialGradient(W/2, H/2, Math.min(W,H)*0.2, W/2, H/2, Math.max(W,H)*0.75);
+    g.addColorStop(0, "rgba(0,0,0,0)");
+    g.addColorStop(1, `rgba(0,0,0,${str})`);
+    ctx.fillStyle = g;
+    ctx.fillRect(0,0,W,H);
+  }
+
+  // ============================
+  // Timeline (long video)
+  // Total ~ 86s, loops
+  // ============================
+  const timeline = [
+    { name:"Garden",  dur:28, sticker:"🌿", hint:"Garden + girl on chair + birds + butterflies + petals + popup", draw:drawGarden },
+    { name:"Gift",    dur:18, sticker:"🎁", hint:"Gift opens + heart confetti + birds pass by", draw:drawGiftScene },
+    { name:"SkyShow", dur:22, sticker:"⭐", hint:"Fireworks + star glow + more birds", draw:drawFireworksScene },
+    { name:"WishCard",dur:18, sticker:"🎀", hint:"Big wish card + floating stickers + soft nature ambience", draw:drawCardScene },
+  ];
+  const fadeDur = 1.2;
+
+  function totalDuration(){
+    return timeline.reduce((s,x)=>s+x.dur, 0);
+  }
+
+  function sceneAtTime(t){
+    const T = totalDuration();
+    let tt = ((t % T) + T) % T;
+    let acc = 0;
+    for(let i=0;i<timeline.length;i++){
+      const seg = timeline[i];
+      if(tt < acc + seg.dur){
+        return { i, local: tt-acc, seg };
+      }
+      acc += seg.dur;
+    }
+    return { i:0, local:0, seg:timeline[0] };
+  }
+
+  function fadeAlpha(local, dur){
+    const inA  = clamp01(local / fadeDur);
+    const outA = clamp01((dur - local) / fadeDur);
+    return Math.min(inA, outA);
+  }
+
+  function showPopup(){ popup.classList.remove("hide"); popup.classList.add("show"); }
+  function hidePopup(){ popup.classList.remove("show"); popup.classList.add("hide"); }
+
+  // ============================
+  // Nature objects
+  // ============================
+  // Clouds (parallax)
+  const cloudsBack = Array.from({length: 6}, () => ({
+    x: rand(-300, W+300), y: rand(H*0.06, H*0.22), s: rand(0.9, 1.7), v: rand(10, 18)
+  }));
+  const cloudsFront = Array.from({length: 4}, () => ({
+    x: rand(-300, W+300), y: rand(H*0.10, H*0.28), s: rand(1.2, 2.2), v: rand(18, 28)
+  }));
+
+  // Birds (parallax + flapping)
+  const birds = Array.from({length: 14}, () => makeBird(true));
+  function makeBird(high){
+    const depth = high ? rand(0.25,0.55) : rand(0.55,0.9);
+    return {
+      x: rand(-200, W+200),
+      y: rand(H*(high?0.08:0.18), H*(high?0.32:0.55)),
+      vx: rand(40, 120) * (Math.random()<0.5 ? 1 : -1),
+      depth,
+      wing: rand(0, Math.PI*2),
+      size: rand(10, 22) * (1.2 - depth),
+      col: depth < 0.6 ? "rgba(15,15,20,.72)" : "rgba(25,25,32,.58)"
+    };
+  }
+
+  // Butterflies (near girl)
+  const butterflies = Array.from({length: 10}, () => ({
+    x: rand(W*0.18, W*0.55),
+    y: rand(H*0.32, H*0.62),
+    vx: rand(-22, 22),
+    vy: rand(-16, 16),
+    ph: rand(0, Math.PI*2),
+    s: rand(8, 16),
+  }));
+
+  // Petals (sakura)
+  const petals = Array.from({length: 1100}, () => ({
+    x: rand(-200, W+200),
+    y: rand(-H, H),
+    vx: rand(-14, 14),
+    vy: rand(18, 48),
+    r: rand(0, Math.PI*2),
+    vr: rand(-2.0, 2.0),
+    s: rand(4, 9),
+    a: rand(0.16, 0.42),
+  }));
+
+  // Leaves (more realistic movement)
+  const leaves = Array.from({length: 180}, () => ({
+    x: rand(-200, W+200),
+    y: rand(-H*0.2, H),
+    vx: rand(10, 30),
+    vy: rand(25, 55),
+    r: rand(0, Math.PI*2),
+    vr: rand(-3.0, 3.0),
+    s: rand(6, 14),
+    col: ["rgba(140,255,200,.35)","rgba(255,226,154,.25)","rgba(255,121,201,.18)"][ (Math.random()*3)|0 ],
+  }));
+
+  // Confetti (scene gift)
+  let confetti = [];
+  function burstConfetti(){
+    confetti = Array.from({length: 520}, () => ({
+      x: W*0.66 + rand(-60,60),
+      y: H*0.64 + rand(-50,50),
+      vx: rand(-260,260),
+      vy: rand(-560,-160),
+      g: rand(560, 900),
+      r: rand(0, Math.PI*2),
+      vr: rand(-10,10),
+      s: rand(6, 16),
+      life: rand(1.9, 2.8),
+      kind: Math.random()<0.72 ? "heart" : "star",
+      col: ["#ff79c9","#86d7ff","#ffe29a","#8bffc8","#ffffff"][(Math.random()*5)|0]
+    }));
+  }
+
+  // Fireworks (scene skyshow)
+  let fireworks = [];
+  function spawnFirework(){
+    const x = rand(W*0.22, W*0.78);
+    const y = rand(H*0.12, H*0.42);
+    const col = ["#ff79c9","#86d7ff","#ffe29a","#8bffc8","#ffffff"][(Math.random()*5)|0];
+    const parts = Array.from({length: 140}, () => {
+      const a = rand(0, Math.PI*2);
+      const sp = rand(90, 320);
+      return {x, y, vx: Math.cos(a)*sp, vy: Math.sin(a)*sp, life: rand(1.2, 1.9)};
+    });
+    fireworks.push({col, parts});
+  }
+
+  // Card stickers (scene 4)
+  const cardStickers = Array.from({length: 18}, () => ({
+    x: rand(W*0.18, W*0.82),
+    y: rand(H*0.18, H*0.72),
+    s: rand(16, 34),
+    ph: rand(0, Math.PI*2),
+    emoji: ["💖","🌟","🧁","🎀","🌷","✨","🍓","🫶","🐦","🌸"][(Math.random()*10)|0]
+  }));
+
+  // ============================
+  // Drawing primitives
+  // ============================
+  function drawSky(dayMood=0.0){
+    // dayMood: 0 normal, 1 more night
+    const g = ctx.createLinearGradient(0,0,0,H);
+    const top  = dayMood<0.5 ? "#86d7ff" : "#4a60b8";
+    const mid  = dayMood<0.5 ? "#b7a7ff" : "#7a74d8";
+    const bot  = "#070611";
+    g.addColorStop(0, top);
+    g.addColorStop(0.45, mid);
+    g.addColorStop(1, bot);
+    ctx.fillStyle = g;
+    ctx.fillRect(0,0,W,H);
+
+    // sun / moon glow
+    const sunX = W*0.14 + Math.sin(globalT*0.03)*W*0.05;
+    const sunY = H*0.14 + Math.cos(globalT*0.02)*H*0.03;
+    softGlowCircle(sunX, sunY, 56, dayMood<0.5 ? "rgba(255,226,154,.95)" : "rgba(180,200,255,.85)", 30, 0.28);
+    softGlowCircle(sunX+90, sunY+20, 20, "rgba(255,121,201,.85)", 24, 0.14);
+    softGlowCircle(sunX+140, sunY+60, 12, "rgba(134,215,255,.85)", 18, 0.12);
+  }
+
+  function drawCloud(x,y,s,alpha=0.92){
+    ctx.save();
+    ctx.translate(x,y);
+    ctx.scale(s,s);
+    ctx.globalAlpha = alpha;
+    ctx.filter = "blur(0.7px)";
+    ctx.fillStyle = "rgba(255,255,255,.95)";
+    ctx.beginPath();
+    ctx.ellipse(0, 0, 78, 48, 0, 0, Math.PI*2);
+    ctx.ellipse(68, -16, 64, 42, 0, 0, Math.PI*2);
+    ctx.ellipse(-68, -12, 58, 40, 0, 0, Math.PI*2);
+    ctx.fill();
+    ctx.filter = "none";
+    ctx.restore();
+  }
+
+  function drawHills(dayMood=0.0){
+    ctx.save();
+    ctx.globalAlpha = 0.92;
+
+    // far hills
+    let g = ctx.createLinearGradient(0,H*0.45,0,H);
+    g.addColorStop(0, dayMood<0.5 ? "rgba(30,40,80,.32)" : "rgba(20,25,60,.40)");
+    g.addColorStop(1, "rgba(0,0,0,.20)");
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.moveTo(0, H*0.62);
+    ctx.quadraticCurveTo(W*0.22, H*0.55, W*0.5, H*0.62);
+    ctx.quadraticCurveTo(W*0.78, H*0.70, W, H*0.62);
+    ctx.lineTo(W,H); ctx.lineTo(0,H); ctx.closePath();
+    ctx.fill();
+
+    // near hills
+    g = ctx.createLinearGradient(0,H*0.55,0,H);
+    g.addColorStop(0, "rgba(0,0,0,.18)");
+    g.addColorStop(1, "rgba(0,0,0,.34)");
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.moveTo(0, H*0.70);
+    ctx.quadraticCurveTo(W*0.35, H*0.63, W*0.62, H*0.72);
+    ctx.quadraticCurveTo(W*0.82, H*0.80, W, H*0.74);
+    ctx.lineTo(W,H); ctx.lineTo(0,H); ctx.closePath();
+    ctx.fill();
+
+    ctx.restore();
+  }
+
+  function drawGround(){
+    const g = ctx.createLinearGradient(0,H*0.62,0,H);
+    g.addColorStop(0, "rgba(139,255,200,.86)");
+    g.addColorStop(1, "rgba(25,120,85,.70)");
+    ctx.fillStyle = g;
+    ctx.fillRect(0, H*0.62, W, H*0.38);
+
+    // tiny grass sparkles
+    ctx.globalAlpha = 0.10;
+    ctx.fillStyle = "#ffffff";
+    for(let i=0;i<900;i++){
+      const x = (i*47)%W;
+      const y = H*0.62 + ((i*97)%(H*0.38));
+      ctx.fillRect(x, y, 1, 1);
+    }
+    ctx.globalAlpha = 1;
+
+    // flowers
+    for(let i=0;i<42;i++){
+      const x = (i*211)%W;
+      const y = H*0.70 + ((i*173)%(H*0.26));
+      const s = 2 + ((i*13)%4);
+      ctx.save();
+      ctx.globalAlpha = 0.18;
+      ctx.fillStyle = i%3===0 ? "#ff79c9" : (i%3===1 ? "#ffe29a" : "#86d7ff");
+      ctx.beginPath();
+      ctx.arc(x,y,s,0,Math.PI*2);
+      ctx.fill();
+      ctx.restore();
+    }
+  }
+
+  function drawSakuraTree(x,y,scale=1,wind=0){
+    ctx.save();
+    ctx.translate(x,y);
+    ctx.scale(scale, scale);
+
+    // trunk with gradient (more realistic)
+    const tg = ctx.createLinearGradient(-10,0,10,140);
+    tg.addColorStop(0, "rgba(80,45,55,.95)");
+    tg.addColorStop(1, "rgba(40,22,30,.95)");
+    ctx.strokeStyle = tg;
+    ctx.lineWidth = 12;
+    ctx.lineCap = "round";
+    ctx.beginPath();
+    ctx.moveTo(0, 140);
+    ctx.quadraticCurveTo(-12 + wind*3, 90, -6 + wind*2, 35);
+    ctx.stroke();
+
+    // branches
+    ctx.lineWidth = 7;
+    ctx.beginPath();
+    ctx.moveTo(-6, 55);
+    ctx.quadraticCurveTo(-35 + wind*4, 35, -52 + wind*4, 12);
+    ctx.moveTo(-6, 48);
+    ctx.quadraticCurveTo(10 + wind*4, 30, 32 + wind*4, 10);
+    ctx.stroke();
+
+    // canopy blobs + highlight
+    const blobs = [
+      {x:-70,y:18,r:56},{x:0,y:-2,r:66},{x:74,y:20,r:52},
+      {x:-28,y:-42,r:46},{x:34,y:-48,r:44}
+    ];
+
+    // glow layer
+    ctx.globalAlpha = 0.30;
+    ctx.fillStyle = "#ff79c9";
+    ctx.filter = "blur(12px)";
+    blobs.forEach(b=>{ ctx.beginPath(); ctx.arc(b.x + wind*8, b.y, b.r, 0, Math.PI*2); ctx.fill(); });
+    ctx.filter = "none"; ctx.globalAlpha = 1;
+
+    // main canopy gradient
+    blobs.forEach(b=>{
+      const cg = ctx.createRadialGradient(b.x-18, b.y-18, 10, b.x, b.y, b.r);
+      cg.addColorStop(0, "rgba(255,255,255,.55)");
+      cg.addColorStop(0.25, "rgba(255,226,154,.28)");
+      cg.addColorStop(0.60, "rgba(255,166,221,.95)");
+      cg.addColorStop(1, "rgba(255,121,201,.65)");
+      ctx.fillStyle = cg;
+      ctx.beginPath();
+      ctx.arc(b.x + wind*8, b.y, b.r, 0, Math.PI*2);
+      ctx.fill();
+
+      // outline
+      ctx.strokeStyle = "rgba(42,23,48,.75)";
+      ctx.lineWidth = 5;
+      ctx.stroke();
+    });
+
+    ctx.restore();
+  }
+
+  // Birds (simple but smooth + flapping)
+  function drawBird(b){
+    const flap = Math.sin(b.wing)*0.9;
+    const wingSpan = b.size * (0.9 + 0.25*Math.abs(flap));
+    ctx.save();
+    ctx.translate(b.x, b.y);
+    ctx.scale(b.vx>0 ? 1 : -1, 1);
+    ctx.globalAlpha = 0.95;
+    ctx.strokeStyle = b.col;
+    ctx.lineWidth = 2.2;
+
+    // body arc
+    ctx.beginPath();
+    ctx.arc(0,0, b.size*0.20, Math.PI*0.2, Math.PI*1.8);
+    ctx.stroke();
+
+    // wings
+    ctx.beginPath();
+    ctx.moveTo(0,0);
+    ctx.quadraticCurveTo( wingSpan*0.55, -b.size*(0.40+0.35*flap), wingSpan, 0);
+    ctx.moveTo(0,0);
+    ctx.quadraticCurveTo(-wingSpan*0.55, -b.size*(0.40+0.35*flap), -wingSpan, 0);
+    ctx.stroke();
+
+    ctx.restore();
+  }
+
+  // Butterflies (cute, near ground)
+  function drawButterfly(x,y,s,phase){
+    const flap = Math.sin(phase)*0.9;
+    ctx.save();
+    ctx.translate(x,y);
+    ctx.globalAlpha = 0.9;
+    ctx.strokeStyle = "rgba(42,23,48,.55)";
+    ctx.lineWidth = 1.6;
+
+    // glow
+    ctx.shadowColor = "rgba(255,121,201,.65)";
+    ctx.shadowBlur = 14;
+
+    // wings
+    ctx.fillStyle = "rgba(255,121,201,.50)";
+    ctx.beginPath();
+    ctx.ellipse(-s*0.6, 0, s*(0.55+0.25*Math.abs(flap)), s*(0.40+0.20*Math.abs(flap)), -0.15, 0, Math.PI*2);
+    ctx.ellipse( s*0.6, 0, s*(0.55+0.25*Math.abs(flap)), s*(0.40+0.20*Math.abs(flap)),  0.15, 0, Math.PI*2);
+    ctx.fill(); ctx.stroke();
+
+    // body
+    ctx.shadowBlur = 0;
+    ctx.strokeStyle = "rgba(15,15,20,.55)";
+    ctx.beginPath();
+    ctx.moveTo(0, -s*0.4);
+    ctx.lineTo(0, s*0.4);
+    ctx.stroke();
+
+    ctx.restore();
+  }
+
+  // Hearts + stars
+  function drawHeart(x,y,size,color,alpha=1){
+    ctx.save();
+    ctx.translate(x,y);
+    ctx.scale(size/20, size/20);
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.moveTo(0, 6);
+    ctx.bezierCurveTo(10, -2, 8, -16, 0, -10);
+    ctx.bezierCurveTo(-8, -16, -10, -2, 0, 6);
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+  }
+  function drawStar(x,y,size,color,alpha=1){
+    ctx.save();
+    ctx.translate(x,y);
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    con
